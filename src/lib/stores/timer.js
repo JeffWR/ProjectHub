@@ -1,34 +1,71 @@
-// ... imports
-import { updateTaskProgress } from './tasks'; // Import the new function
+import { writable, get } from 'svelte/store';
+import { updateTaskProgress, tasks } from './tasks'; 
 
-// ... inside start() -> setInterval ...
-interval = setInterval(() => {
-    update(state => {
-        // 1. DECREASE TIMER
-        if (state.timeLeft > 0) {
-            // NEW: Update task progress in real-time (every second)
-            if (state.mode === 'pomodoro') {
-                const currentTaskId = get(activeTaskId);
-                if (currentTaskId) {
-                    updateTaskProgress(currentTaskId, 1); // Add 1 second of progress
-                }
-            }
-            return { ...state, timeLeft: state.timeLeft - 1 };
-        }
-        
-        // 2. TIME IS UP
-        clearInterval(interval);
-        
-        // (Log session logic remains mostly the same, but progress is already updated!)
-        const currentTaskId = get(activeTaskId);
-        const allTasks = get(tasks);
-        const taskTitle = allTasks.find(t => t.id === currentTaskId)?.title || 'Unspecified Task';
+const defaultSettings = {
+    pomodoro: 25,
+    shortBreak: 5,
+    longBreak: 15
+};
 
-        if (state.mode === 'pomodoro') {
-            logSession(state.settings.pomodoro, currentTaskId, taskTitle);
-            addToast(`Session Complete!`, 'success');
-        }
-
-        return { ...state, isRunning: false, timeLeft: state.settings[state.mode] * 60 }; 
+function createTimer() {
+    const { subscribe, set, update } = writable({
+        timeLeft: defaultSettings.pomodoro * 60,
+        isRunning: false,
+        mode: 'pomodoro', // 'pomodoro', 'shortBreak', 'longBreak'
+        settings: defaultSettings
     });
-}, 1000);
+
+    let interval;
+
+    const start = () => {
+        update(s => ({ ...s, isRunning: true }));
+        
+        interval = setInterval(() => {
+            update(state => {
+                // 1. STOP if time is up
+                if (state.timeLeft <= 0) {
+                    clearInterval(interval);
+                    return { ...state, isRunning: false, timeLeft: state.settings[state.mode] * 60 }; 
+                }
+
+                // 2. TRACK PROGRESS (Only if in Pomodoro mode)
+                if (state.mode === 'pomodoro') {
+                    const allTasks = get(tasks);
+                    
+                    // --- MAGIC FIX ---
+                    // Find the FIRST task that is 'inprogress'. This is our "Hero" task.
+                    const activeTask = allTasks.find(t => t.status === 'inprogress');
+                    
+                    if (activeTask) {
+                        updateTaskProgress(activeTask.id, 1);
+                    }
+                }
+
+                return { ...state, timeLeft: state.timeLeft - 1 };
+            });
+        }, 1000);
+    };
+
+    const pause = () => {
+        update(s => ({ ...s, isRunning: false }));
+        clearInterval(interval);
+    };
+
+    const reset = () => {
+        pause();
+        update(s => ({ ...s, timeLeft: s.settings[s.mode] * 60 }));
+    };
+
+    const setMode = (mode) => {
+        pause();
+        update(s => ({ 
+            ...s, 
+            mode, 
+            timeLeft: s.settings[mode] * 60 
+        }));
+    };
+
+    return { subscribe, start, pause, reset, setMode };
+}
+
+export const timer = createTimer();

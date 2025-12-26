@@ -3,6 +3,7 @@
     import { X, Check } from 'lucide-svelte';
 
     export let isOpen = false;
+    export let taskToEdit = null; // NEW: Accepts a task object
     export let onSave;
     export let onClose;
 
@@ -17,9 +18,26 @@
         { name: 'High', color: '#f44336' }
     ];
 
+    // Reactive: Update form fields when taskToEdit changes
+    $: if (taskToEdit) {
+        title = taskToEdit.title;
+        description = taskToEdit.description;
+        priority = taskToEdit.priority;
+        estTime = taskToEdit.estTime;
+    } else if (!isOpen) {
+        // Only clear form when modal is fully closed
+        reset(); 
+    }
+
     function handleSave() {
         if (!title.trim()) return;
-        onSave({ title, description, priority, estTime });
+        
+        // Pass back ID if editing, otherwise just the new data
+        onSave({ 
+            id: taskToEdit?.id, 
+            title, description, priority, estTime 
+        });
+        
         reset();
     }
 
@@ -32,7 +50,7 @@
     <div class="backdrop" transition:fade on:click={onClose}>
         <div class="modal" transition:fly={{ y: 20 }} on:click|stopPropagation>
             <div class="header">
-                <h2>Create New Task</h2>
+                <h2>{taskToEdit ? 'Edit Task' : 'Create New Task'}</h2>
                 <button class="close-btn" on:click={onClose}><X size={20}/></button>
             </div>
 
@@ -61,65 +79,43 @@
                     </label>
 
                     <label>Est. Time (min)
-                        <input type="number" bind:value={estTime} min="5" step="5" />
+                        <input type="number" bind:value={estTime} min="1" max="120" />
                     </label>
                 </div>
             </div>
 
             <div class="footer">
-                <button class="save-btn" on:click={handleSave}>Create Task <Check size={18}/></button>
+                <button class="save-btn" on:click={handleSave}>
+                    {taskToEdit ? 'Save Changes' : 'Create Task'} <Check size={18}/>
+                </button>
             </div>
         </div>
     </div>
 {/if}
 
 <style>
-    .backdrop {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
-        z-index: 100; display: flex; align-items: center; justify-content: center;
-    }
-    .modal {
-        background: white; color: #333; width: 90%; max-width: 500px;
-        border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        overflow: hidden; font-family: 'Poppins', sans-serif;
-    }
-    .header {
-        padding: 20px 30px; border-bottom: 1px solid #eee;
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .header h2 { margin: 0; font-size: 1.2rem; }
-    .close-btn { background: none; border: none; cursor: pointer; opacity: 0.5; transition: 0.2s; }
-    .close-btn:hover { opacity: 1; transform: rotate(90deg); }
+    .backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .modal { background: white; width: 90%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden; }
+    
+    .header { padding: 20px 30px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .header h2 { margin: 0; font-size: 1.2rem; color: #333; }
+    .close-btn { background: none; border: none; cursor: pointer; color: #999; transition: 0.2s; }
+    .close-btn:hover { opacity: 1; transform: rotate(90deg); color: #ba4949; }
 
     .form-body { padding: 30px; display: flex; flex-direction: column; gap: 15px; }
     
     label { font-size: 0.85rem; font-weight: 600; color: #666; display: flex; flex-direction: column; gap: 8px; }
-    input, textarea {
-        padding: 12px; border-radius: 8px; border: 1px solid #ddd;
-        font-family: inherit; font-size: 1rem; transition: 0.2s;
-    }
+    input, textarea { padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; font-size: 1rem; transition: 0.2s; }
     input:focus, textarea:focus { border-color: #ba4949; outline: none; }
 
     .row { display: flex; gap: 20px; }
     .row label { flex: 1; }
 
     .prio-selector { display: flex; background: #f5f5f5; padding: 4px; border-radius: 8px; }
-    .prio-selector button {
-        flex: 1; border: none; background: transparent; padding: 8px;
-        font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 6px;
-        color: #888; transition: 0.2s;
-    }
-    .prio-selector button.selected {
-        background: white; color: var(--p-color); box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
+    .prio-selector button { flex: 1; border: none; background: transparent; padding: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 6px; color: #888; transition: 0.2s; }
+    .prio-selector button.selected { background: white; color: var(--p-color); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
     .footer { padding: 20px 30px; background: #f9f9f9; text-align: right; }
-    .save-btn {
-        background: #ba4949; color: white; border: none; padding: 12px 24px;
-        border-radius: 12px; font-weight: 600; cursor: pointer;
-        display: inline-flex; align-items: center; gap: 8px;
-        box-shadow: 0 4px 10px rgba(186, 73, 73, 0.3); transition: 0.2s;
-    }
-    .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(186, 73, 73, 0.4); }
+    .save-btn { background: #ba4949; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .save-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(186, 73, 73, 0.4); }
 </style>

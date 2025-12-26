@@ -1,69 +1,77 @@
 <script>
-    import { history } from '$lib/stores/history';
-    import StatsGrid from '$lib/components/StatsGrid.svelte';
+    import { tasks } from '$lib/stores/tasks';
+    import { ArrowLeft, CheckCircle, Clock, Flame } from 'lucide-svelte';
 
-    // Calculate Summary Data
-    $: totalMinutes = $history.reduce((acc, item) => acc + item.duration, 0);
-    $: totalSessions = $history.length;
-    
-    // Calculate "Today's" minutes
-    $: todayMinutes = $history
-        .filter(h => new Date(h.date).toDateString() === new Date().toDateString())
-        .reduce((acc, h) => acc + h.duration, 0);
+    // Derived stats
+    $: completedTasks = $tasks.filter(t => t.status === 'review');
+    $: totalMinutes = $tasks.reduce((acc, t) => acc + (t.timeSpent || 0), 0);
+    $: totalHours = (totalMinutes / 60).toFixed(1);
+    $: completionRate = $tasks.length ? Math.round((completedTasks.length / $tasks.length) * 100) : 0;
 </script>
 
-<div class="glass-panel wide">
+<div class="stats-container">
     <div class="header">
-        <h2>Statistics</h2>
-        <span class="subtitle">Your Focus Journey</span>
+        <a href="/" class="back-btn"><ArrowLeft /> Back to Board</a>
+        <h1>Productivity Insights</h1>
     </div>
 
-    <div class="stats-row">
-        <div class="stat-card">
-            <h3>{todayMinutes}m</h3>
-            <small>Today</small>
+    <div class="grid">
+        <div class="card highlight">
+            <div class="icon"><CheckCircle size={32} /></div>
+            <div class="data">
+                <span class="num">{completedTasks.length}</span>
+                <span class="label">Tasks Completed</span>
+            </div>
         </div>
-        <div class="stat-card">
-            <h3>{totalMinutes}m</h3>
-            <small>Total Focus</small>
+
+        <div class="card">
+            <div class="icon"><Clock size={32} /></div>
+            <div class="data">
+                <span class="num">{totalHours}h</span>
+                <span class="label">Focus Time</span>
+            </div>
         </div>
-        <div class="stat-card">
-            <h3>{totalSessions}</h3>
-            <small>Sessions</small>
+
+        <div class="card">
+            <div class="icon"><Flame size={32} /></div>
+            <div class="data">
+                <span class="num">{completionRate}%</span>
+                <span class="label">Completion Rate</span>
+            </div>
         </div>
     </div>
-
-    <StatsGrid />
 
     <div class="history-list">
-        <h3>Recent Sessions</h3>
-        <ul>
-            {#each $history.slice(0, 5) as item}
-                <li>
-                    <span>{item.taskTitle || 'No Task'}</span>
-                    <span class="time">{new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                </li>
-            {/each}
-        </ul>
+        <h3>Recent History</h3>
+        {#each completedTasks.reverse() as task}
+            <div class="history-item">
+                <span class="title">{task.title}</span>
+                <span class="time">{Math.round(task.timeSpent)}m spent</span>
+                <span class="date">{new Date(task.createdAt).toLocaleDateString()}</span>
+            </div>
+        {/each}
+        {#if completedTasks.length === 0}
+            <p class="empty">No completed tasks yet. Go crush it!</p>
+        {/if}
     </div>
 </div>
 
 <style>
-    .glass-panel {
-        background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-        width: 100%; max-width: 600px; padding: 40px; border-radius: 24px;
-        color: white; text-align: center;
-    }
-    .stats-row { display: flex; gap: 15px; margin: 30px 0; }
-    .stat-card {
-        background: rgba(0,0,0,0.2); flex: 1; padding: 15px; border-radius: 12px;
-    }
-    .stat-card h3 { font-size: 1.5rem; margin: 0; }
-    .history-list { margin-top: 30px; text-align: left; }
-    .history-list ul { list-style: none; padding: 0; }
-    .history-list li {
-        display: flex; justify-content: space-between;
-        padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
-        font-size: 0.9rem; opacity: 0.9;
-    }
+    .stats-container { max-width: 800px; margin: 0 auto; padding: 40px 20px; color: white; }
+    .header { margin-bottom: 40px; }
+    .back-btn { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.7); text-decoration: none; margin-bottom: 20px; }
+    .back-btn:hover { color: white; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    
+    .card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 25px; border-radius: 20px; display: flex; align-items: center; gap: 20px; border: 1px solid rgba(255,255,255,0.1); }
+    .card.highlight { background: #ba4949; border: none; }
+    
+    .num { display: block; font-size: 2.5rem; font-weight: 700; line-height: 1; }
+    .label { font-size: 0.9rem; opacity: 0.8; }
+    
+    .history-list { background: rgba(255,255,255,0.05); border-radius: 24px; padding: 30px; }
+    .history-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .time { color: #aaa; font-size: 0.9rem; }
+    .empty { color: rgba(255,255,255,0.3); font-style: italic; }
 </style>
