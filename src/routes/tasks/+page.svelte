@@ -1,60 +1,146 @@
 <script>
-    import { tasks, addTask, activeTaskId } from '$lib/stores/tasks';
+    import { tasks, addTask, moveTask } from '$lib/stores/tasks';
+    import TaskItem from '$lib/components/TaskItem.svelte';
+    import TaskModal from '$lib/components/TaskModal.svelte';
+    import { Plus, LayoutList } from 'lucide-svelte';
+
+    let showModal = false;
+
+    $: todoTasks = $tasks.filter(t => t.status === 'todo');
+    $: progressTasks = $tasks.filter(t => t.status === 'inprogress');
+    $: reviewTasks = $tasks.filter(t => t.status === 'review');
+
+    function handleCreate(data) {
+        addTask(data);
+        showModal = false;
+    }
+
+    // --- DRAG AND DROP HANDLERS ---
+    function handleDragStart(event, id) {
+        event.dataTransfer.setData('text/plain', id);
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDrop(event, newStatus) {
+        event.preventDefault(); // REQUIRED to allow dropping
+        const id = parseInt(event.dataTransfer.getData('text/plain'));
+        if (id) moveTask(id, newStatus);
+    }
     
-    let newTitle = '';
-    let newPriority = 'Low';
-    
-    function handleAdd() {
-        if (!newTitle) return;
-        addTask(newTitle, newPriority, 'General', 25);
-        newTitle = '';
+    function handleDragOver(event) {
+        event.preventDefault(); // REQUIRED to allow dropping
     }
 </script>
 
-<div class="glass-panel wide">
-    <h2>Tasks</h2>
+<TaskModal isOpen={showModal} onClose={() => showModal = false} onSave={handleCreate} />
+
+<div class="grid-container">
     
-    <div class="input-group">
-        <input bind:value={newTitle} placeholder="What needs to be done?" />
-        <select bind:value={newPriority}>
-            <option>Low</option>
-            <option>High</option>
-        </select>
-        <button on:click={handleAdd}>+</button>
+    <div class="col-left">
+        <div class="create-section">
+            <button class="big-create-btn" on:click={() => showModal = true}>
+                <div class="icon-circle"><Plus size={32} /></div>
+                <span>Create New Task</span>
+            </button>
+        </div>
+
+        <div class="section list-section" 
+             role="list"
+             on:drop={(e) => handleDrop(e, 'todo')} 
+             on:dragover={handleDragOver}>
+            
+            <div class="header"><h3>To Do</h3><span class="badge">{todoTasks.length}</span></div>
+            <div class="scroll-area">
+                {#each todoTasks as task (task.id)}
+                    <div draggable="true" on:dragstart={(e) => handleDragStart(e, task.id)} role="listitem">
+                        <TaskItem {task} />
+                    </div>
+                {/each}
+            </div>
+        </div>
     </div>
 
-    <ul class="list">
-        {#each $tasks as task (task.id)}
-            <li class="task-item" class:selected={$activeTaskId === task.id}>
-                <div class="info">
-                    <strong>{task.title}</strong>
-                    <span class="badge">{task.priority}</span>
+    <div class="col-mid section"
+         role="list"
+         on:drop={(e) => handleDrop(e, 'inprogress')} 
+         on:dragover={handleDragOver}>
+        
+        <div class="header highlight"><h3>In Focus</h3><span class="badge">{progressTasks.length}</span></div>
+        <div class="scroll-area">
+            {#each progressTasks as task (task.id)}
+                <div draggable="true" on:dragstart={(e) => handleDragStart(e, task.id)} role="listitem">
+                    <TaskItem {task} showProgress={true} />
                 </div>
-                <button on:click={() => activeTaskId.set(task.id)}>
-                    {$activeTaskId === task.id ? 'Active' : 'Select'}
-                </button>
-            </li>
-        {/each}
-    </ul>
+            {/each}
+            {#if progressTasks.length === 0}
+                <div class="empty-placeholder">Drag tasks here to work on them</div>
+            {/if}
+        </div>
+    </div>
+
+    <div class="col-right">
+        <div class="section review-section"
+             role="list"
+             on:drop={(e) => handleDrop(e, 'review')} 
+             on:dragover={handleDragOver}>
+            
+            <div class="header"><h3>Review</h3><span class="badge">{reviewTasks.length}</span></div>
+            <div class="scroll-area">
+                {#each reviewTasks as task (task.id)}
+                    <div draggable="true" on:dragstart={(e) => handleDragStart(e, task.id)} role="listitem">
+                        <TaskItem {task} />
+                    </div>
+                {/each}
+            </div>
+        </div>
+
+        <div class="section history-link-section">
+            <a href="/stats" class="history-card">
+                <div class="icon"><LayoutList size={24} /></div>
+                <div><strong>Completed</strong><small>View History</small></div>
+            </a>
+        </div>
+    </div>
 </div>
 
 <style>
-    .glass-panel {
-        background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-        width: 100%; max-width: 600px; height: 70vh; padding: 30px; border-radius: 20px;
-        display: flex; flex-direction: column;
-    }
-    .wide { max-width: 800px; }
-    
-    .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-    input { flex: 1; padding: 12px; border-radius: 8px; border: none; }
-    button { cursor: pointer; border: none; border-radius: 8px; }
+    /* Ensure the scroll-area fills the space so drop works everywhere */
+    .scroll-area { flex: 1; min-height: 100px; padding-bottom: 50px; } 
 
-    .list { list-style: none; padding: 0; overflow-y: auto; }
-    .task-item {
-        background: rgba(0,0,0,0.1); padding: 15px; margin-bottom: 10px; border-radius: 10px;
-        display: flex; justify-content: space-between; align-items: center;
+    .grid-container {
+        display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 20px;
+        width: 100%; max-width: 1400px; height: 85vh; padding: 20px; box-sizing: border-box;
     }
-    .task-item.selected { border: 2px solid white; background: rgba(255,255,255,0.1); }
-    .badge { font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; }
+    .col-left, .col-right { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+    
+    .section {
+        background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
+        padding: 20px; display: flex; flex-direction: column; overflow: hidden;
+        transition: background 0.2s;
+    }
+    /* Visual cue when dragging over */
+    .section:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); }
+
+    .create-section { flex: 0 0 auto; }
+    .big-create-btn {
+        width: 100%; height: 100px; background: white; color: #ba4949;
+        border: none; border-radius: 24px; display: flex; align-items: center; gap: 20px; padding: 0 30px;
+        font-family: 'Poppins', sans-serif; font-size: 1.2rem; font-weight: 700;
+        cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .icon-circle { background: #ba4949; color: white; padding: 10px; border-radius: 50%; display: flex; }
+    
+    .list-section, .col-mid, .review-section { flex: 1; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .header h3 { margin: 0; font-size: 1.1rem; color: rgba(255,255,255,0.9); }
+    .header.highlight h3 { color: white; font-size: 1.4rem; font-weight: 700; }
+    .badge { background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
+    .empty-placeholder { text-align: center; opacity: 0.5; margin-top: 50px; color: white; }
+
+    .history-link-section { flex: 0 0 100px; padding: 0; background: rgba(0,0,0,0.2); border: none; }
+    .history-card {
+        display: flex; align-items: center; gap: 15px; width: 100%; height: 100%;
+        text-decoration: none; color: white; padding: 0 25px; box-sizing: border-box;
+    }
 </style>
