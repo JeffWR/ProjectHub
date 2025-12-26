@@ -6,16 +6,13 @@ const initialTasks = browser && localStorage.getItem('tasks')
     : [];
 
 export const tasks = writable(initialTasks);
-export const activeTaskId = writable(null);
 
 if (browser) {
     tasks.subscribe(value => localStorage.setItem('tasks', JSON.stringify(value)));
 }
 
 export const addTask = (taskData) => {
-    // Handle both minutes input or combined hours/minutes if you expand later
     const totalMinutes = (parseInt(taskData.estHours || 0) * 60) + parseInt(taskData.estTime || 25);
-    
     tasks.update(all => [
         ...all, 
         { 
@@ -23,7 +20,7 @@ export const addTask = (taskData) => {
             title: taskData.title,
             description: taskData.description || '',
             priority: taskData.priority,
-            estTime: totalMinutes,
+            estTime: totalMinutes > 0 ? totalMinutes : 25,
             timeSpent: 0,
             status: 'todo',
             createdAt: new Date()
@@ -31,11 +28,8 @@ export const addTask = (taskData) => {
     ]);
 };
 
-// NEW: Updates title, description, etc. without changing status/progress
 export const updateTaskDetails = (id, data) => {
-    tasks.update(all => all.map(t => 
-        t.id === id ? { ...t, ...data } : t
-    ));
+    tasks.update(all => all.map(t => t.id === id ? { ...t, ...data } : t));
 };
 
 export const updateTaskProgress = (id, secondsToAdd) => {
@@ -45,21 +39,30 @@ export const updateTaskProgress = (id, secondsToAdd) => {
     }));
 };
 
-export const moveTask = (id, newStatus) => {
-    tasks.update(all => all.map(t => 
-        t.id === id ? { ...t, status: newStatus } : t
-    ));
-
-    // CRITICAL FIX: Syncs the "Active Task" with the "In Progress" column
-    if (newStatus === 'inprogress') {
-        activeTaskId.set(id);
-    } else {
-        // If moving out of progress, stop the specific task timer
-        activeTaskId.update(currentId => currentId === id ? null : currentId);
-    }
-};
-
 export const deleteTask = (id) => {
     tasks.update(all => all.filter(t => t.id !== id));
-    activeTaskId.update(current => current === id ? null : current);
+};
+
+// LOGIC: Handles moving AND reordering
+export const moveTask = (taskId, newStatus, targetIndex = -1) => {
+    tasks.update(all => {
+        const oldIndex = all.findIndex(t => t.id === taskId);
+        if (oldIndex === -1) return all;
+
+        // 1. Remove from old spot
+        const [task] = all.splice(oldIndex, 1);
+        task.status = newStatus;
+
+        // 2. Insert into new spot
+        // If targetIndex is provided, insert there. Otherwise add to bottom.
+        if (targetIndex !== -1) {
+            // Safety clamp to ensure we don't insert way outside the array
+            const safeIndex = Math.min(targetIndex, all.length);
+            all.splice(safeIndex, 0, task);
+        } else {
+            all.push(task); 
+        }
+        
+        return [...all]; 
+    });
 };

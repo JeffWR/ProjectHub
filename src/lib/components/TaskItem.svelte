@@ -4,9 +4,11 @@
     
     export let task;
     export let showProgress = false;
-    export let isHero = false; // NEW PROP
+    export let isHero = false; 
 
+    // Safe calculation to prevent NaN
     $: progressPct = task.estTime > 0 ? Math.min(100, (task.timeSpent / task.estTime) * 100) : 0;
+    
     const pColors = { Low: '#4caf50', Medium: '#ff9800', High: '#f44336' };
     $: pColor = pColors[task.priority] || '#999';
 </script>
@@ -50,18 +52,22 @@
     }
     .task-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     
-    /* --- HERO STYLES --- */
+    /* Active / Selected Task Style */
     .task-card.hero {
-        transform: scale(1.05); /* Make it bigger */
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        transform: scale(1.05); 
+        box-shadow: 0 0 0 3px #ba4949, 0 10px 30px rgba(0,0,0,0.3); /* Ring effect */
         z-index: 10;
-        border: 2px solid #ba4949; /* Highlight border */
+        border-left: 4px solid #ba4949; 
     }
 
     .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .priority { font-size: 0.65rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
     
-    .active-badge { font-size: 0.65rem; color: #ba4949; display: flex; align-items: center; gap: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; animation: pulse 2s infinite; }
+    .active-badge { 
+        font-size: 0.65rem; color: #ba4949; display: flex; align-items: center; gap: 4px; 
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; 
+        animation: pulse 2s infinite; 
+    }
     @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
     .card-body h4 { margin: 0 0 4px 0; font-size: 1rem; color: #333; }
@@ -73,6 +79,6 @@
     .delete-btn:hover { color: #f44336; }
 
     .progress-container { margin: 12px 0 0 0; position: relative; height: 6px; background: #eee; border-radius: 3px; }
-    .progress-bar { height: 100%; background: #ba4949; border-radius: 3px; transition: width 0.5s; }
+    .progress-bar { height: 100%; background: #ba4949; border-radius: 3px; transition: width 0.5s linear; }
     .progress-text { position: absolute; right: 0; top: -18px; font-size: 0.7rem; color: #ba4949; font-weight: bold; }
 </style>
