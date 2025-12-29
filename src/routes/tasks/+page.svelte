@@ -67,11 +67,16 @@
         
         <div class="header highlight"><h3>In Focus</h3><span class="badge">{progressTasks.length}</span></div>
         <div class="scroll-area">
-            {#each progressTasks as task (task.id)}
+            {#each progressTasks as task, index (task.id)}
                 <div draggable="true" on:dragstart={(e) => handleDragStart(e, task.id)} role="listitem">
-                    <TaskItem {task} showProgress={true} />
+                    <TaskItem 
+                        {task} 
+                        showProgress={true} 
+                        isHero={index === 0} 
+                    />
                 </div>
             {/each}
+
             {#if progressTasks.length === 0}
                 <div class="empty-placeholder">Drag tasks here to work on them</div>
             {/if}
@@ -104,24 +109,84 @@
 </div>
 
 <style>
-    /* Ensure the scroll-area fills the space so drop works everywhere */
-    .scroll-area { flex: 1; min-height: 100px; padding-bottom: 50px; } 
-
+    /* MAIN LAYOUT */
     .grid-container {
-        display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 20px;
-        width: 100%; max-width: 1400px; height: 85vh; padding: 20px; box-sizing: border-box;
+        display: grid; 
+        grid-template-columns: 1fr 1.5fr 1fr; 
+        gap: 20px;
+        width: 100%; 
+        max-width: 1400px; 
+        /* Fix the height so the inside can scroll */
+        height: 85vh; 
+        padding: 20px; 
+        box-sizing: border-box;
     }
-    .col-left, .col-right { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+
+    .col-left, .col-right { display: flex; flex-direction: column; gap: 20px; height: 100%; min-height: 0; }
     
+    /* SECTIONS (The Glass Cards) */
     .section {
-        background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
-        padding: 20px; display: flex; flex-direction: column; overflow: hidden;
+        background: rgba(255, 255, 255, 0.1); 
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        border-radius: 24px;
+        padding: 20px; 
+        display: flex; 
+        flex-direction: column; 
+        
+        /* Critical: Don't let the card grow endlessly */
+        overflow: hidden; 
+        min-height: 0; 
+        
         transition: background 0.2s;
     }
-    /* Visual cue when dragging over */
     .section:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); }
 
+    .list-section, .col-mid, .review-section { flex: 1; min-height: 0; }
+
+    /* --- THE SCROLLING & FADE MAGIC --- */
+    .scroll-area { 
+        flex: 1; 
+        min-height: 0; /* Allows flex child to shrink and scroll */
+        
+        /* 1. ENABLE SCROLLING */
+        overflow-y: auto; 
+        overflow-x: hidden;
+        
+        /* 2. THE FADE OUT EFFECT */
+        -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+        mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+
+        /* 3. Padding so the last item isn't cut off by the fade */
+        padding-bottom: 40px;
+    }
+
+    /* --- THE SCROLLING & FADE MAGIC --- */
+    .scroll-area { 
+        flex: 1; 
+        min-height: 0; 
+        
+        /* 1. ENABLE SCROLLING */
+        overflow-y: auto; 
+        overflow-x: hidden;
+        
+        /* 2. HIDE SCROLLBAR (Cross-Browser Support) */
+        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;  /* IE/Edge */
+        
+        /* 3. FADE EFFECT */
+        -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+        mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+
+        padding-bottom: 40px;
+    }
+
+    /* Hide scrollbar for Chrome/Safari/Opera */
+    .scroll-area::-webkit-scrollbar { 
+        display: none; 
+    }
+
+    /* --- HEADERS & BUTTONS --- */
     .create-section { flex: 0 0 auto; }
     .big-create-btn {
         width: 100%; height: 100px; background: white; color: #ba4949;
@@ -131,8 +196,7 @@
     }
     .icon-circle { background: #ba4949; color: white; padding: 10px; border-radius: 50%; display: flex; }
     
-    .list-section, .col-mid, .review-section { flex: 1; }
-    .header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 15px; flex-shrink: 0; }
     .header h3 { margin: 0; font-size: 1.1rem; color: rgba(255,255,255,0.9); }
     .header.highlight h3 { color: white; font-size: 1.4rem; font-weight: 700; }
     .badge { background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
