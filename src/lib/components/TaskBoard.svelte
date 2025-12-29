@@ -86,12 +86,77 @@
 </div>
 
 <style>
-    .board-grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 25px; height: 100%; width: 100%; }
-    .col-wrapper { display: flex; flex-direction: column; height: 100%; gap: 15px; min-width: 0; }
-    .list-header { font-weight: 700; color: rgba(255,255,255,0.6); display: flex; justify-content: space-between; padding: 0 5px; }
+    /* 1. Force the grid to stay inside the parent container */
+    .board-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1.2fr 1fr; 
+        gap: 25px; 
+        height: 100%; 
+        width: 100%; 
+        overflow: hidden; 
+    }
+
+    /* 2. The column wrapper */
+    .col-wrapper { 
+        display: flex; 
+        flex-direction: column; 
+        height: 100%; 
+        gap: 15px; 
+        min-width: 0; 
+        min-height: 0; 
+        position: relative; /* Needed for the fade effect context */
+    }
+
+    .list-header { 
+        font-weight: 700; 
+        color: rgba(255,255,255,0.6); 
+        display: flex; 
+        justify-content: space-between; 
+        padding: 0 5px;
+        flex-shrink: 0; 
+    }
+
+    /* 3. THE SCROLLING ZONE WITH FADE EFFECT */
+    .drop-zone { 
+        flex: 1; 
+        background: rgba(255,255,255,0.02); 
+        border-radius: 20px; 
+        padding: 10px; 
+        
+        /* SCROLLING LOGIC */
+        overflow-y: auto; 
+        overflow-x: hidden;
+        
+        /* THE FADE EFFECT (Masking) */
+        /* This makes the bottom 20px transparent */
+        -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+        mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+
+        border: 2px dashed transparent; 
+        transition: 0.2s; 
+        
+        /* Add some padding at the bottom so the last task isn't cut off by the fade */
+        padding-bottom: 40px; 
+    }
+
+    /* Hide scrollbar by default for a cleaner "Phone" look, show on hover */
+    .drop-zone::-webkit-scrollbar {
+        width: 6px;
+    }
+    .drop-zone::-webkit-scrollbar-track {
+        background: transparent; 
+    }
+    .drop-zone::-webkit-scrollbar-thumb {
+        background: transparent; /* Hidden by default */
+        border-radius: 10px;
+    }
+    .drop-zone:hover::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2); /* Visible on hover */
+    }
+
+    /* ... Existing styles ... */
     .focus-header { color: #ff7675; text-shadow: 0 0 10px rgba(255, 118, 117, 0.3); }
     .count { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
-    .drop-zone { flex: 1; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 10px; overflow-y: auto; border: 2px dashed transparent; transition: 0.2s; }
     .drop-zone:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
     .focus-zone { background: linear-gradient(180deg, rgba(186, 73, 73, 0.05) 0%, rgba(0,0,0,0) 100%); }
     .create-card { background: white; border: none; padding: 20px; border-radius: 16px; display: flex; align-items: center; gap: 15px; cursor: pointer; font-weight: 600; color: #ba4949; transition: 0.2s; flex-shrink: 0; }
