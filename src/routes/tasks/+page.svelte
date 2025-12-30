@@ -161,6 +161,8 @@
         padding-bottom: 40px;
     }
 
+    /* src/routes/tasks/+page.svelte */
+
     /* --- THE SCROLLING & FADE MAGIC --- */
     .scroll-area { 
         flex: 1; 
@@ -170,18 +172,21 @@
         overflow-y: auto; 
         overflow-x: hidden;
         
-        /* 2. HIDE SCROLLBAR (Cross-Browser Support) */
+        /* 2. HIDE SCROLLBAR */
         scrollbar-width: none;  /* Firefox */
-        -ms-overflow-style: none;  /* IE/Edge */
+        -ms-overflow-style: none;  /* IE */
         
-        /* 3. FADE EFFECT */
+        /* 3. FADE EFFECT (Bottom only) */
+        /* We use a mask so the bottom tasks fade out gently */
         -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
         mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
 
-        padding-bottom: 40px;
+        /* 4. THE FIX: ADD PADDING ON ALL SIDES */
+        /* This creates space for the "Upward Glow" and "Side Glow" */
+        padding: 20px; 
     }
 
-    /* Hide scrollbar for Chrome/Safari/Opera */
+    /* Hide scrollbar for Chrome/Safari */
     .scroll-area::-webkit-scrollbar { 
         display: none; 
     }
