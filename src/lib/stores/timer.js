@@ -106,8 +106,18 @@ function createTimer() {
             timeLeft: s.settings[mode] * 60 
         }));
     };
+    const setDuration = (minutes) => {
+        const safeMinutes = parseInt(minutes) || 1; // Prevent 0 or NaN
+        update(s => ({
+            ...s,
+            timeLeft: safeMinutes * 60,
+            // Also update the setting for the current mode (pomodoro/short/long)
+            // so if they hit Reset, it goes back to this new custom time.
+            settings: { ...s.settings, [s.mode]: safeMinutes }
+        }));
+    };
 
-    return { subscribe, start, pause, reset, setMode };
+    return { subscribe, start, pause, reset, setMode, setDuration };
 }
 
 export const timer = createTimer();
