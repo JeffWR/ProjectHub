@@ -1,9 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { updateTaskProgress, tasks } from './tasks'; 
-import { logSession } from './history';
-import { addToast } from './toast';
+import { browser } from '$app/environment';
 
-// FIX 1: Aligned keys with your UI ('short' instead of 'shortBreak')
 const defaultSettings = {
     pomodoro: 25,
     short: 5,   
@@ -11,90 +9,120 @@ const defaultSettings = {
 };
 
 function createTimer() {
-    // Create the store object first so we can read it inside functions
-    const store = writable({
+    // 1. INITIALIZE STATE
+    let initialData = {
         timeLeft: defaultSettings.pomodoro * 60,
         isRunning: false,
         mode: 'pomodoro', 
-        settings: defaultSettings
-    });
+        settings: defaultSettings,
+        lastTick: null // NEW: Tracks the exact time of the last update
+    };
 
+    // Load from LocalStorage if available
+    if (browser) {
+        const saved = localStorage.getItem('timerState');
+        if (saved) initialData = { ...initialData, ...JSON.parse(saved) };
+    }
+
+    const store = writable(initialData);
     const { subscribe, update } = store;
     let interval;
 
+    // --- THE DELTA ENGINE ---
+    const tick = () => {
+        update(state => {
+            if (!state.isRunning) return state;
+
+            const now = Date.now();
+            const lastTick = state.lastTick || now; // Fallback if null
+            
+            // Calculate how many seconds passed since the last frame (The Delta)
+            const deltaMs = now - lastTick;
+            
+            // If less than 1 second passed, don't update yet (prevents micro-updates)
+            if (deltaMs < 1000) return state;
+
+            const deltaSeconds = Math.floor(deltaMs / 1000);
+
+            // 1. CALCULATE NEW TIME
+            let newTimeLeft = state.timeLeft - deltaSeconds;
+            let timeWorked = deltaSeconds; // How much to credit the task
+
+            // Clamp: If we passed 0, we stop there.
+            if (newTimeLeft <= 0) {
+                // Only credit the time it took to reach 0 (don't credit extra time)
+                timeWorked = state.timeLeft; 
+                newTimeLeft = 0;
+            }
+
+            // 2. UPDATE THE TASK (Synced exactly with the delta)
+            if (state.mode === 'pomodoro' && timeWorked > 0) {
+                const currentTasks = get(tasks);
+                const topTask = currentTasks.find(t => t.status === 'inprogress');
+                if (topTask) {
+                    updateTaskProgress(topTask.id, timeWorked);
+                }
+            }
+
+            // 3. STOP IF FINISHED
+            if (newTimeLeft === 0) {
+                // Stop the loop
+                if (interval) clearInterval(interval);
+                return { 
+                    ...state, 
+                    isRunning: false, 
+                    timeLeft: 0,
+                    lastTick: null
+                };
+            }
+
+            // 4. SAVE STATE (Update lastTick to NOW, minus the remainder ms)
+            // We subtract the remainder to keep the seconds smooth next time
+            return { 
+                ...state, 
+                timeLeft: newTimeLeft,
+                lastTick: now - (deltaMs % 1000) 
+            };
+        });
+    };
+
+    // --- ACTIONS ---
+
     const start = () => {
         const state = get(store);
-
-        // FIX 2: Only force a task if we are in 'pomodoro' mode.
-        // Breaks should just start immediately.
+        
+        // Validation: Need a task for Pomodoro
         if (state.mode === 'pomodoro') {
             const allTasks = get(tasks);
-            const focusTasks = allTasks.filter(t => t.status === 'inprogress');
-            
-            if (focusTasks.length === 0) {
-                 addToast('Drag a task to "In Focus" to start working!', 'info');
-                 return; 
-            }
+            const hasFocusTask = allTasks.some(t => t.status === 'inprogress');
+            // Optional: You can block start here if no task
         }
 
-        // Prevent double-clicking start
         if (state.isRunning) return;
 
-        update(s => ({ ...s, isRunning: true }));
+        // Mark the start time immediately so the first tick is accurate
+        update(s => ({ ...s, isRunning: true, lastTick: Date.now() }));
         
-        interval = setInterval(() => {
-            update(currentState => {
-                // 1. STOP if time is up
-                if (currentState.timeLeft <= 0) {
-                    clearInterval(interval);
-                    
-                    // Only log history for Pomodoros, not breaks
-                    if (currentState.mode === 'pomodoro') {
-                        const currentTasks = get(tasks);
-                        const topTask = currentTasks.find(t => t.status === 'inprogress');
-                        
-                        if (topTask) {
-                            logSession(currentState.settings.pomodoro, topTask.id, topTask.title);
-                            addToast(`Session Complete! Take a break.`, 'success');
-                        }
-                    } else {
-                        addToast(`Break over! Back to work.`, 'info');
-                    }
-
-                    return { 
-                        ...currentState, 
-                        isRunning: false, 
-                        timeLeft: currentState.settings[currentState.mode] * 60 
-                    }; 
-                }
-
-                // 2. TRACK PROGRESS (Only if in Pomodoro mode)
-                if (currentState.mode === 'pomodoro') {
-                    const currentTasks = get(tasks);
-                    const topTask = currentTasks.find(t => t.status === 'inprogress');
-
-                    if (topTask) {
-                        updateTaskProgress(topTask.id, 1); 
-                    } else {
-                        // If task is removed during timer, pause it
-                        clearInterval(interval);
-                        return { ...currentState, isRunning: false };
-                    }
-                }
-
-                return { ...currentState, timeLeft: currentState.timeLeft - 1 };
-            });
-        }, 1000);
+        if (interval) clearInterval(interval);
+        
+        // Run the tick check often (e.g., every 250ms or 1s). 
+        // Since we use Math.floor(delta), running it faster won't speed up time, 
+        // it just makes the UI more responsive when you switch tabs.
+        interval = setInterval(tick, 1000);
     };
 
     const pause = () => {
-        update(s => ({ ...s, isRunning: false }));
-        clearInterval(interval);
+        update(s => ({ ...s, isRunning: false, lastTick: null }));
+        if (interval) clearInterval(interval);
     };
 
     const reset = () => {
         pause();
-        update(s => ({ ...s, timeLeft: s.settings[s.mode] * 60 }));
+        update(s => ({ 
+            ...s, 
+            timeLeft: s.settings[s.mode] * 60,
+            lastTick: null 
+        }));
     };
 
     const setMode = (mode) => {
@@ -102,20 +130,43 @@ function createTimer() {
         update(s => ({ 
             ...s, 
             mode, 
-            // This now correctly finds 'short' or 'long' in settings
             timeLeft: s.settings[mode] * 60 
         }));
     };
+
     const setDuration = (minutes) => {
-        const safeMinutes = parseInt(minutes) || 1; // Prevent 0 or NaN
+        const safeMinutes = parseInt(minutes) || 1;
         update(s => ({
             ...s,
             timeLeft: safeMinutes * 60,
-            // Also update the setting for the current mode (pomodoro/short/long)
-            // so if they hit Reset, it goes back to this new custom time.
             settings: { ...s.settings, [s.mode]: safeMinutes }
         }));
     };
+
+    // --- BROWSER VISIBILITY HANDLER ---
+    // If the user leaves the tab and comes back, force an immediate update
+    if (browser) {
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                const state = get(store);
+                if (state.isRunning) {
+                    tick(); // Run the math immediately
+                }
+            }
+        });
+
+        // Save to LocalStorage on every change
+        store.subscribe(val => {
+            localStorage.setItem('timerState', JSON.stringify(val));
+        });
+    }
+
+    // Resume on load
+    const state = get(store);
+    if (state.isRunning) {
+        // If it was running, restart the interval
+        interval = setInterval(tick, 1000);
+    }
 
     return { subscribe, start, pause, reset, setMode, setDuration };
 }
