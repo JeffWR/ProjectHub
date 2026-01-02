@@ -107,7 +107,7 @@
         {/if}
     </div>
 
-    <h1 class="timer-digits" on:dblclick={startEditing} title="Double-click to edit">
+    <h1 class="timer-digits" on:click={startEditing} title="Click to edit">
         {displayTime}
     </h1>
 
