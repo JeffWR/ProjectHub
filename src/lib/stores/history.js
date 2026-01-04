@@ -1,29 +1,28 @@
-// src/lib/stores/history.js
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-// 1. Load existing history from LocalStorage
-const initialHistory = browser && localStorage.getItem('history') 
-    ? JSON.parse(localStorage.getItem('history')) 
+// Initial Load
+const initialHistory = browser && localStorage.getItem('pomodoroHistory') 
+    ? JSON.parse(localStorage.getItem('pomodoroHistory')) 
     : [];
 
 export const history = writable(initialHistory);
 
-// 2. Auto-save to LocalStorage whenever history changes
+// Subscribe to save to localStorage
 if (browser) {
-    history.subscribe(value => localStorage.setItem('history', JSON.stringify(value)));
+    history.subscribe(val => localStorage.setItem('pomodoroHistory', JSON.stringify(val)));
 }
 
-// 3. Helper to log a new session
-export const logSession = (minutes, taskId, taskTitle) => {
-    history.update(all => [
-        {
+// Action: Log a completed session
+export const logSession = (durationMinutes, taskId, taskTitle) => {
+    history.update(all => {
+        const newLog = {
             id: Date.now(),
-            date: new Date().toISOString(), // 2023-10-27T10:00:00.000Z
-            duration: minutes,
+            date: new Date().toISOString(), // Full timestamp
+            duration: durationMinutes,
             taskId,
             taskTitle
-        },
-        ...all // Add new item to the top
-    ]);
+        };
+        return [...all, newLog];
+    });
 };
