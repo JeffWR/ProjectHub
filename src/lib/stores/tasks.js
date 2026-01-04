@@ -53,6 +53,10 @@ export const moveTask = (taskId, newStatus, targetIndex = -1) => {
         const [task] = all.splice(oldIndex, 1);
         task.status = newStatus;
 
+        if (newStatus === 'archived') {
+            task.completedAt = new Date().toISOString();
+        }
+
         if (targetIndex !== -1) {
             const safeIndex = Math.min(targetIndex, all.length);
             all.splice(safeIndex, 0, task);
