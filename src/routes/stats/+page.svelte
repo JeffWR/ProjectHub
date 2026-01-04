@@ -80,7 +80,7 @@
         }
         heatmapData = tempHeatmap;
 
-        // RHYTHM GRAPH (Last 7 Days)
+        // RHYTHM GRAPH
         let tempRhythm = [];
         let rMax = 0;
         for (let i = 6; i >= 0; i--) {
@@ -90,7 +90,6 @@
             const mins = safeHistory.filter(h => isSameDay(safeDate(h.date), d)).reduce((a,b)=>a+(b.duration||0),0);
             const hrs = parseFloat((mins/60).toFixed(1));
             
-            // Avg Hour Calculation
             const daySessions = safeHistory.filter(h => isSameDay(safeDate(h.date), d));
             let avgH = 0;
             if (daySessions.length) avgH = daySessions.reduce((a,h) => a + new Date(h.date).getHours(), 0) / daySessions.length;
@@ -101,7 +100,7 @@
         rhythmData = tempRhythm;
         maxRhythmVal = rMax > 0 ? rMax : 5;
 
-        // PRIORITY TRENDS (Last 6 Months)
+        // TRENDS
         const monthMap = {}; 
         allArchived.forEach(t => {
             const d = safeDate(t.completedAt || t.createdAt);
@@ -126,7 +125,7 @@
         lineGraphData = tempLine;
         maxTrendVal = tMax > 0 ? tMax : 5;
 
-        // GENERAL STATS
+        // STATS
         const totalMins = safeHistory.reduce((a,b)=>a+(b.duration||0), 0);
         stats = {
             todayFocus: todaysSessions.length,
@@ -138,7 +137,6 @@
             totalArchived: allArchived.length
         };
 
-        // VISUALS
         weekData = Array(7).fill(0).map((_, i) => {
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
@@ -160,13 +158,22 @@
         }));
     }
 
-    // HELPER: Smooth Lines
+    // --- COMPACT GRAPH SCALING ---
+    // Reduced height to 60 to fit inside smaller boxes
+    const GRAPH_HEIGHT = 60;
+    const PADDING = 5; 
+    
     const getSmoothPath = (points, key, scaleMax) => {
         if (points.length === 0) return "";
-        const coords = points.map((p, i) => [
-            (i / (points.length - 1)) * 300, 
-            100 - ((p[key] / scaleMax) * 80)
-        ]);
+        const safeMax = scaleMax || 1;
+        
+        const coords = points.map((p, i) => {
+            const x = (i / (points.length - 1)) * 300;
+            const normalized = p[key] / safeMax;
+            const y = (GRAPH_HEIGHT + PADDING) - (normalized * GRAPH_HEIGHT); 
+            return [x, y];
+        });
+
         let d = `M ${coords[0][0]} ${coords[0][1]}`;
         for (let i = 0; i < coords.length - 1; i++) {
             const p0 = coords[i === 0 ? 0 : i - 1];
@@ -182,7 +189,10 @@
         return d;
     };
 
-    const getTrendY = (val) => 80 - ((val / maxTrendVal) * 60); 
+    const getTrendY = (val) => {
+        const normalized = val / (maxTrendVal || 1);
+        return (GRAPH_HEIGHT + PADDING) - (normalized * GRAPH_HEIGHT);
+    };
 </script>
 
 <div class="page-container">
@@ -262,6 +272,7 @@
                     </div>
                     <button on:click={() => changeDate(1)}><ChevronRight size={18}/></button>
                 </div>
+                
                 <div class="timeline-scroll">
                     {#each timeline as t}
                         <div class="time-slot">
@@ -279,7 +290,7 @@
 
         <div class="column right-col">
             
-            <div class="stat-box">
+            <div class="stat-box heatmap-box">
                 <h3>Yearly Activity</h3>
                 <div class="heatmap-grid">
                     {#each heatmapData as week}
@@ -297,37 +308,39 @@
                 </div>
             </div>
 
-            <div class="stat-box rhythm-box">
-                <h3>Daily Rhythm</h3>
+            <div class="stat-box flex-box">
+                <div class="rhythm-header">
+                    <h3>Daily Rhythm</h3>
+                    <div class="legend-mini">
+                        <span style="color:#0984e3">Time</span>
+                        <span style="color:#00b894">Tasks</span>
+                        <span style="color:#e17055">Hr</span>
+                    </div>
+                </div>
+                <div class="chart-labels-top">
+                    {#each rhythmData as d}<span>{d.label}</span>{/each}
+                </div>
                 <div class="chart-wrapper">
-                    <svg viewBox="-10 -10 320 130" class="line-chart">
-                        {#each [0, 25, 50, 75, 100] as y}<line x1="0" y1={y} x2="300" y2={y} stroke="rgba(255,255,255,0.05)" stroke-width="1"/>{/each}
+                    <svg viewBox="-10 -5 320 90" class="line-chart">
+                        {#each [0, 20, 40, 60] as y}<line x1="0" y1={y} x2="300" y2={y} stroke="rgba(255,255,255,0.05)" stroke-width="1"/>{/each}
                         
                         <path d={getSmoothPath(rhythmData, 'hours', maxRhythmVal)} fill="none" stroke="#0984e3" stroke-width="3" />
                         <path d={getSmoothPath(rhythmData, 'tasks', maxRhythmVal)} fill="none" stroke="#00b894" stroke-width="3" />
                         <path d={getSmoothPath(rhythmData, 'time', 24)} fill="none" stroke="#e17055" stroke-width="3" stroke-dasharray="4" />
-
+                        
                         {#each rhythmData as d, i}
                             {#if d.time > 0}
-                                <circle cx={(i/6)*300} cy={100 - ((d.time/24)*80)} r="3" fill="#e17055"/>
+                                <circle cx={(i/6)*300} cy={(60+5) - ((d.time/24)*60)} r="3" fill="#e17055"/>
                             {/if}
                         {/each}
                     </svg>
-                    <div class="chart-labels">
-                        {#each rhythmData as d}<span>{d.label}</span>{/each}
-                    </div>
-                </div>
-                <div class="legend">
-                    <span style="color:#0984e3">Time</span>
-                    <span style="color:#00b894">Tasks</span>
-                    <span style="color:#e17055">Hour</span>
                 </div>
             </div>
 
-            <div class="stat-box trend-box">
+            <div class="stat-box flex-box">
                 <h3>Priority Trends</h3>
                 <div class="chart-wrapper">
-                    <svg viewBox="0 0 300 100" class="line-chart">
+                    <svg viewBox="0 0 300 90" class="line-chart">
                         <polyline fill="none" stroke="#f44336" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.High)}`).join(' ')} />
                         <polyline fill="none" stroke="#ff9800" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.Medium)}`).join(' ')} />
                         <polyline fill="none" stroke="#4caf50" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.Low)}`).join(' ')} />
@@ -337,10 +350,16 @@
                             <circle cx={i * 50 + 25} cy={getTrendY(d.Medium)} r="3" fill="#ff9800" />
                             <circle cx={i * 50 + 25} cy={getTrendY(d.Low)} r="3" fill="#4caf50" />
                         {/each}
+                        
+                        {#each lineGraphData as d, i}
+                            <text x={i * 50 + 25} y="85" font-size="10" fill="rgba(255,255,255,0.5)" text-anchor="middle">{d.label}</text>
+                        {/each}
                     </svg>
-                    <div class="chart-labels">
-                        {#each lineGraphData as d}<span>{d.label}</span>{/each}
-                    </div>
+                </div>
+                <div class="legend">
+                    <span style="color:#f44336">High</span>
+                    <span style="color:#ff9800">Med</span>
+                    <span style="color:#4caf50">Low</span>
                 </div>
             </div>
 
@@ -351,7 +370,8 @@
 <style>
     /* PAGE SETUP */
     .page-container {
-        height: calc(100vh - 120px);
+        /* Extra room at bottom to prevent cut-off */
+        height: calc(100vh - 120px); 
         max-width: 1400px; margin: 0 auto;
         display: flex; flex-direction: column;
         color: #eee; overflow: hidden;
@@ -364,16 +384,25 @@
     /* GRID */
     .dashboard-grid {
         display: grid; grid-template-columns: 1.2fr 1.6fr 1.2fr;
-        gap: 20px; flex: 1; min-height: 0;
+        gap: 15px; flex: 1; min-height: 0;
+        /* Safe Area padding at bottom */
+        padding-bottom: 20px; 
     }
-    .column { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px; }
-    .column::-webkit-scrollbar { width: 4px; }
-    .column::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    
+    .column { 
+        display: flex; flex-direction: column; gap: 15px; 
+        overflow-y: auto; padding-right: 5px; 
+        scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .column::-webkit-scrollbar { display: none; }
+    
+    /* RIGHT COLUMN: Fits screen exactly */
+    .right-col { height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
 
     /* BOXES */
-    .stat-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; flex-shrink: 0; }
-    .box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .box-header h3, .stat-box h3 { margin: 0 0 10px 0; font-size: 1rem; font-weight: 600; }
+    /* Reduced padding to 12px for compact fit */
+    .stat-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 12px; flex-shrink: 0; }
+    .box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .highlight-val { font-size: 0.8rem; font-weight: 700; color: #ff7675; background: rgba(255,118,117,0.1); padding: 4px 10px; border-radius: 10px; }
     .meta { font-size: 0.8rem; color: rgba(255,255,255,0.5); text-align: center; margin-top: 10px; }
 
@@ -400,28 +429,46 @@
     .expand-btn { margin-top: 10px; width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: none; color: white; border-radius: 8px; cursor: pointer; }
 
     /* TIMELINE */
-    .mid-col .stat-box { height: 100%; padding: 0; overflow: hidden; display: flex; flex-direction: column; }
-    .timeline-nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0,0,0,0.2); }
+    .mid-col { overflow: hidden; } 
+    .mid-col .stat-box { height: 100%; padding: 0; display: flex; flex-direction: column; }
+    .timeline-nav { 
+        display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0,0,0,0.2); 
+        border-radius: 16px 16px 0 0; /* FIX: Square edge */
+    }
     .timeline-nav button { background: none; border: none; color: white; opacity: 0.7; cursor: pointer; }
     .date-disp { text-align: center; line-height: 1; }
     .dd { font-size: 1.4rem; font-weight: 800; display: block; } .mm { font-size: 0.8rem; text-transform: uppercase; color: rgba(255,255,255,0.6); }
-    .timeline-scroll { flex: 1; overflow-y: auto; padding: 15px; }
+    
+    .timeline-scroll { 
+        flex: 1; overflow-y: auto; padding: 15px; 
+        scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 40px; /* Safe space */
+    }
+    .timeline-scroll::-webkit-scrollbar { display: none; }
+
     .time-slot { display: flex; height: 50px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .hr { width: 50px; font-size: 0.8rem; color: rgba(255,255,255,0.4); text-align: right; padding-right: 15px; }
     .slot-fill { flex: 1; height: 100%; position: relative; }
     .session-pill { position: absolute; top: 5px; bottom: 5px; left: 0; right: 10px; background: rgba(255,118,117,0.2); border-left: 3px solid #ff7675; border-radius: 6px; padding: 0 12px; display: flex; align-items: center; font-size: 0.85rem; }
 
     /* RIGHT COLUMN WIDGETS */
-    .heatmap-grid { display: flex; gap: 2px; overflow: hidden; margin-bottom: 15px; height: 80px; justify-content: center; }
+    .heatmap-box { height: auto; padding-bottom: 20px; flex-shrink: 0; } 
+    .heatmap-grid { display: flex; gap: 2px; overflow: hidden; margin-bottom: 10px; height: 60px; justify-content: center; } /* Small Heatmap */
     .heat-col { display: flex; flex-direction: column; gap: 2px; }
     .heat-cell { width: 6px; height: 6px; border-radius: 1px; background: rgba(255,255,255,0.1); }
     .level-0 { background: rgba(255,255,255,0.05); } .level-1 { background: #ffcdd2; } .level-2 { background: #e57373; } .level-3 { background: #d32f2f; } .level-4 { background: #b71c1c; }
     .stats-summary { display: flex; justify-content: space-between; gap: 5px; }
-    .s-item { flex: 1; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; text-align: center; }
-    .s-item strong { display: block; font-size: 1rem; } .s-item label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.6; }
+    .s-item { flex: 1; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; text-align: center; }
+    .s-item strong { display: block; font-size: 0.9rem; } .s-item label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.6; }
 
-    .chart-wrapper { position: relative; height: 120px; margin-top: 5px; }
+    /* FLEX BOXES (Rhythm & Trends) */
+    .flex-box { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    
+    .rhythm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .rhythm-header h3 { margin: 0; font-size: 1rem; }
+    .legend-mini { font-size: 0.7rem; font-weight: 600; display: flex; gap: 10px; }
+    .chart-labels-top { display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 5px; font-size: 0.65rem; color: rgba(255,255,255,0.5); }
+
+    .chart-wrapper { position: relative; flex: 1; width: 100%; min-height: 60px; }
     .line-chart { width: 100%; height: 100%; overflow: visible; }
-    .chart-labels { display: flex; justify-content: space-between; margin-top: 2px; font-size: 0.65rem; color: rgba(255,255,255,0.5); padding: 0 5px; }
-    .legend { display: flex; justify-content: center; gap: 10px; margin-top: 5px; font-size: 0.75rem; font-weight: 600; }
+    .legend { display: flex; justify-content: center; gap: 10px; margin-top: auto; font-size: 0.75rem; font-weight: 600; padding-top: 5px; }
 </style>
