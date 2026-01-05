@@ -241,9 +241,8 @@
 {/if}
 
 <style>
-    /* ... YOUR EXISTING CSS (Unchanged) ... */
-
-    /* --- GLASS PANEL (Normal State) --- */
+    /* ... YOUR EXISTING CSS (UNCHANGED) ... */
+    
     .glass-panel {
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(12px);
@@ -255,12 +254,7 @@
         text-align: center;
         transition: opacity 0.2s ease, transform 0.2s ease;
     }
-
-    .glass-panel.hidden {
-        opacity: 0;
-        pointer-events: none;
-        transform: scale(0.95);
-    }
+    .glass-panel.hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
 
     .fullscreen-overlay {
         position: fixed; inset: 0;
@@ -285,44 +279,29 @@
         mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
         -webkit-mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
     }
-
     .center-line {
-        position: absolute; left: 50%; bottom: 0;
-        width: 4px; height: 70px;
-        background: #ff7675; border-radius: 2px;
-        transform: translateX(-50%);
-        z-index: 10; pointer-events: none;
-        box-shadow: 0 0 15px #ff7675;
+        position: absolute; left: 50%; bottom: 0; width: 4px; height: 70px;
+        background: #ff7675; border-radius: 2px; transform: translateX(-50%);
+        z-index: 10; pointer-events: none; box-shadow: 0 0 15px #ff7675;
     }
-
     .scroll-track {
-        display: flex; align-items: flex-end;
-        overflow-x: auto; height: 100%; width: 100%;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
+        display: flex; align-items: flex-end; overflow-x: auto; height: 100%; width: 100%;
+        scroll-snap-type: x mandatory; scrollbar-width: none;
     }
     .scroll-track::-webkit-scrollbar { display: none; }
-
+    
     .tick-group {
-        flex-shrink: 0;
-        display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-        height: 100%; position: relative;
-        scroll-snap-align: center; 
+        flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+        height: 100%; position: relative; scroll-snap-align: center; 
     }
-
     .tick { background: rgba(255,255,255,0.4); border-radius: 2px; }
     .tick.major { width: 4px; height: 50px; background: white; margin-bottom: 10px; }
     .tick.minor { width: 2px; height: 20px; margin-bottom: 10px; opacity: 0.5; }
-
     .tick-label { position: absolute; top: 30px; font-size: 1.1rem; font-weight: 700; color: white; }
 
     .save-btn {
-        margin-top: 50px;
-        background: white; color: #ba4949;
-        border: none; padding: 15px 50px; border-radius: 50px;
-        font-weight: 800; font-size: 1.2rem; cursor: pointer;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        transition: transform 0.1s;
+        margin-top: 50px; background: white; color: #ba4949; border: none; padding: 15px 50px; border-radius: 50px;
+        font-weight: 800; font-size: 1.2rem; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.1s;
     }
     .save-btn:hover { transform: scale(1.05); }
 
@@ -340,15 +319,6 @@
     .modes button { background: transparent; border: none; color: rgba(255,255,255,0.6); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .modes button:hover { color: white; }
     .modes button.active { background: rgba(255,255,255,0.2); color: white; }
-
-    /* --- NEW CYCLE INFO STYLE --- */
-    .cycle-info {
-        margin-top: 20px;
-        font-size: 0.85rem;
-        color: rgba(255,255,255,0.5);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
+    .cycle-info { margin-top: 20px; font-size: 0.85rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
