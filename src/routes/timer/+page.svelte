@@ -1,6 +1,11 @@
 <script>
     import { timer } from '$lib/stores/timer';
     import { tasks, heroTask } from '$lib/stores/tasks';
+    
+    // NEW IMPORTS: Connect to our Brain
+    import { settings } from '$lib/stores/settings';
+    import { history, logSession } from '$lib/stores/history';
+    
     import { tick } from 'svelte';
     
     // --- DISPLAY LOGIC ---
@@ -12,11 +17,78 @@
     // --- TIMELINE CONFIG ---
     let isEditing = false;
     let scrollContainer;
-    let currentMinutes = 25;
+    
+    // UPDATED: Default to settings, fallback to 25
+    let currentMinutes = $settings?.pomodoro || 25;
     
     // ALIGNMENT CONFIG
     const TICK_WIDTH = 50; 
     const MAX_TIME = 120;  
+
+    // --- NEW: AUTO-CYCLE LOGIC ---
+    
+    // 1. Calculate Today's Sessions
+    const isToday = (dateStr) => {
+        const d = new Date(dateStr);
+        const today = new Date();
+        return d.toDateString() === today.toDateString();
+    };
+    
+    $: completedToday = $history.filter(h => isToday(h.date)).length;
+
+    // 2. Watch for Timer Completion (Hits 0)
+    let previousTime = -1;
+    
+    $: {
+        // If timer was running (prev > 0) and now hit 0
+        if (previousTime > 0 && $timer.timeLeft === 0) {
+            handleComplete();
+        }
+        previousTime = $timer.timeLeft;
+    }
+
+    async function handleComplete() {
+        // A. If we just finished a Pomodoro
+        if ($timer.mode === 'pomodoro') {
+            // Log it
+            logSession($settings.pomodoro, $heroTask?.id, $heroTask?.title || 'Focus');
+            
+            // Calculate next step
+            // We use (completedToday + 1) because the store update might be async
+            const sessionsDone = completedToday + 1;
+            const interval = $settings.longBreakInterval || 4;
+
+            if (sessionsDone % interval === 0) {
+                switchMode('long'); // Switch to Long Break
+            } else {
+                switchMode('short'); // Switch to Short Break
+            }
+        } 
+        // B. If we just finished a Break
+        else {
+            switchMode('pomodoro'); // Back to work
+        }
+
+        // Optional: Auto-start if you want
+        if ($settings.autoStart) {
+            await tick(); // Wait for state update
+            timer.start();
+        }
+    }
+
+    // Helper to switch modes and update time from Settings
+    function switchMode(mode) {
+        timer.setMode(mode);
+        
+        // Map mode strings to settings properties
+        let duration = 25;
+        if (mode === 'pomodoro') duration = $settings.pomodoro;
+        if (mode === 'short') duration = $settings.shortBreak;
+        if (mode === 'long') duration = $settings.longBreak;
+        
+        timer.setDuration(duration);
+        currentMinutes = duration; // Sync the ruler variable
+    }
 
     // --- EDIT MODE START ---
     async function startEditing() {
@@ -28,39 +100,31 @@
         await tick();
         
         if (scrollContainer) {
-            // Force alignment: Minute 1 starts at 0 scroll
             const targetScroll = (currentMinutes - 1) * TICK_WIDTH;
             scrollContainer.scrollLeft = targetScroll;
         }
     }
 
-    // --- SCROLL HANDLER (Read Value) ---
+    // --- SCROLL HANDLER ---
     function handleScroll() {
         if (!scrollContainer) return;
         const scrollLeft = scrollContainer.scrollLeft;
-        
-        // Convert pixels to minutes
         let rawValue = Math.round(scrollLeft / TICK_WIDTH) + 1;
         currentMinutes = Math.max(1, Math.min(MAX_TIME, rawValue));
     }
 
-    // --- GLOBAL DRAG PHYSICS ---
+    // --- DRAG PHYSICS (Unchanged) ---
     let isDragging = false;
     let startX, startScrollLeft;
 
     function onMouseDown(e) {
-        // Only drag if we are in Edit Mode
         if (!isEditing) return;
-        
-        // Don't drag if clicking the "Set Time" button
         if (e.target.closest('button')) return;
-
         isDragging = true;
         startX = e.pageX;
-        // We need to read the scroll container's state, but we clicked anywhere on screen
         if (scrollContainer) {
             startScrollLeft = scrollContainer.scrollLeft;
-            scrollContainer.style.scrollSnapType = 'none'; // Disable snap for smoothness
+            scrollContainer.style.scrollSnapType = 'none'; 
         }
         document.body.style.cursor = 'grabbing';
     }
@@ -68,8 +132,6 @@
     function onMouseUp() {
         if (!isDragging) return;
         isDragging = false;
-        
-        // Re-enable snap to magnetize
         if (scrollContainer) scrollContainer.style.scrollSnapType = 'x mandatory';
         document.body.style.cursor = 'default';
     }
@@ -77,11 +139,8 @@
     function onMouseMove(e) {
         if (!isDragging || !scrollContainer) return;
         e.preventDefault();
-        
         const x = e.pageX;
-        const walk = (x - startX) * 1.5; // 1.5x Speed factor
-        
-        // Drag Left -> Move Content Left -> Reveal Higher Numbers
+        const walk = (x - startX) * 1.5; 
         scrollContainer.scrollLeft = startScrollLeft - walk;
     }
 
@@ -119,31 +178,33 @@
     </div>
 
     <div class="modes">
-        <button on:click={() => timer.setMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
-        <button on:click={() => timer.setMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
-        <button on:click={() => timer.setMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
+        <button on:click={() => switchMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
+        <button on:click={() => switchMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
+        <button on:click={() => switchMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
     </div>
+
+    {#if $timer.mode === 'pomodoro'}
+        <div class="cycle-info">
+            Session { (completedToday % ($settings.longBreakInterval || 4)) + 1 } of { $settings.longBreakInterval || 4 }
+        </div>
+    {/if}
 </div>
 
 {#if isEditing}
     <div class="fullscreen-overlay">
         <div class="overlay-content">
-            
             <div class="edit-readout">
                 <span class="val">{currentMinutes}</span>
                 <span class="lbl">min</span>
             </div>
-
             <div class="ruler-container">
                 <div class="center-line"></div>
-
                 <div 
                     class="scroll-track"
                     bind:this={scrollContainer}
                     on:scroll={handleScroll}
                 >
                     <div class="spacer" style="flex: 0 0 calc(50% - {TICK_WIDTH / 2}px);"></div>
-
                     {#each Array(MAX_TIME) as _, i}
                         <div class="tick-group" style="width: {TICK_WIDTH}px">
                             {#if (i + 1) % 5 === 0}
@@ -154,17 +215,17 @@
                             {/if}
                         </div>
                     {/each}
-                    
                     <div class="spacer" style="flex: 0 0 calc(50% - {TICK_WIDTH / 2}px);"></div>
                 </div>
             </div>
-
             <button class="save-btn" on:click={saveEdit}>SET TIME</button>
         </div>
     </div>
 {/if}
 
 <style>
+    /* ... YOUR EXISTING CSS (Unchanged) ... */
+
     /* --- GLASS PANEL (Normal State) --- */
     .glass-panel {
         background: rgba(255, 255, 255, 0.1);
@@ -178,38 +239,30 @@
         transition: opacity 0.2s ease, transform 0.2s ease;
     }
 
-    /* FADE OUT when editing (Fixes the "Box Behind" issue) */
     .glass-panel.hidden {
         opacity: 0;
         pointer-events: none;
         transform: scale(0.95);
     }
 
-    /* --- FULLSCREEN OVERLAY (Edit State) --- */
     .fullscreen-overlay {
         position: fixed; inset: 0;
-        background: rgba(15, 15, 15, 0.9); /* Darker background for focus */
+        background: rgba(15, 15, 15, 0.9);
         backdrop-filter: blur(20px);
         z-index: 9999;
         display: flex; justify-content: center; align-items: center;
         animation: fadeIn 0.3s ease-out;
-        cursor: grab; /* Shows user they can drag anywhere */
+        cursor: grab;
     }
     .fullscreen-overlay:active { cursor: grabbing; }
 
-    .overlay-content {
-        width: 100%;
-        display: flex; flex-direction: column; align-items: center;
-        pointer-events: none; /* Let clicks pass through to window listener */
-    }
-    /* Re-enable pointer events for buttons/scroll */
+    .overlay-content { width: 100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
     .overlay-content > * { pointer-events: auto; }
 
     .edit-readout { margin-bottom: 40px; color: white; line-height: 1; }
     .edit-readout .val { font-size: 8rem; font-weight: 800; }
     .edit-readout .lbl { font-size: 2rem; font-weight: 500; opacity: 0.8; margin-left: 10px; }
 
-    /* --- RULER STYLES --- */
     .ruler-container {
         position: relative; width: 100%; height: 160px;
         mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
@@ -244,10 +297,7 @@
     .tick.major { width: 4px; height: 50px; background: white; margin-bottom: 10px; }
     .tick.minor { width: 2px; height: 20px; margin-bottom: 10px; opacity: 0.5; }
 
-    .tick-label {
-        position: absolute; top: 30px;
-        font-size: 1.1rem; font-weight: 700; color: white;
-    }
+    .tick-label { position: absolute; top: 30px; font-size: 1.1rem; font-weight: 700; color: white; }
 
     .save-btn {
         margin-top: 50px;
@@ -259,7 +309,6 @@
     }
     .save-btn:hover { transform: scale(1.05); }
 
-    /* --- STANDARD UI --- */
     .task-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
     .active-dot { color: #4caf50; font-size: 0.8rem; }
     .inactive { opacity: 0.6; font-style: italic; }
@@ -274,5 +323,15 @@
     .modes button { background: transparent; border: none; color: rgba(255,255,255,0.6); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .modes button:hover { color: white; }
     .modes button.active { background: rgba(255,255,255,0.2); color: white; }
+
+    /* --- NEW CYCLE INFO STYLE --- */
+    .cycle-info {
+        margin-top: 20px;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
