@@ -1,11 +1,8 @@
 <script>
     import { timer } from '$lib/stores/timer';
     import { tasks, heroTask } from '$lib/stores/tasks';
-    
-    // NEW IMPORTS: Connect to our Brain
     import { settings } from '$lib/stores/settings';
     import { history, logSession } from '$lib/stores/history';
-    
     import { tick } from 'svelte';
     
     // --- DISPLAY LOGIC ---
@@ -18,87 +15,100 @@
     let isEditing = false;
     let scrollContainer;
     
-    // UPDATED: Default to settings, fallback to 25
+    // Sync currentMinutes for the ruler (Fallback to 25 if settings missing)
     let currentMinutes = $settings?.pomodoro || 25;
     
-    // ALIGNMENT CONFIG
     const TICK_WIDTH = 50; 
     const MAX_TIME = 120;  
 
-    // --- NEW: AUTO-CYCLE LOGIC ---
-    
-    // 1. Calculate Today's Sessions
+    // --- AUTO-CYCLE LOGIC ---
     const isToday = (dateStr) => {
         const d = new Date(dateStr);
         const today = new Date();
         return d.toDateString() === today.toDateString();
     };
     
-    $: completedToday = $history.filter(h => isToday(h.date)).length;
+    $: completedToday = $history ? $history.filter(h => isToday(h.date)).length : 0;
 
-    // 2. Watch for Timer Completion (Hits 0)
+    // --- THE SIMPLIFIED COMPLETION LOGIC ---
     let previousTime = -1;
-    
+    let processingCompletion = false; // Safety Lock
+
     $: {
-        // If timer was running (prev > 0) and now hit 0
-        if (previousTime > 0 && $timer.timeLeft === 0) {
-            handleComplete();
+        // 1. Check if we just hit 0 from a positive number
+        if (previousTime > 0 && $timer.timeLeft === 0 && !processingCompletion) {
+            handleTimerDone();
         }
+        // 2. Always update previousTime for the next check
         previousTime = $timer.timeLeft;
     }
 
-    async function handleComplete() {
-        // A. If we just finished a Pomodoro
-        if ($timer.mode === 'pomodoro') {
-            // Log it
-            logSession($settings.pomodoro, $heroTask?.id, $heroTask?.title || 'Focus');
-            
-            // Calculate next step
-            // We use (completedToday + 1) because the store update might be async
-            const sessionsDone = completedToday + 1;
-            const interval = $settings.longBreakInterval || 4;
+    function handleTimerDone() {
+        // Lock the function so it doesn't fire twice
+        processingCompletion = true;
 
-            if (sessionsDone % interval === 0) {
-                switchMode('long'); // Switch to Long Break
-            } else {
-                switchMode('short'); // Switch to Short Break
-            }
-        } 
-        // B. If we just finished a Break
-        else {
-            switchMode('pomodoro'); // Back to work
+        // 1. Log the work immediately
+        if ($timer.mode === 'pomodoro') {
+            logSession($settings?.pomodoro || 25, $heroTask?.id, $heroTask?.title || 'Focus');
         }
 
-        // Optional: Auto-start if you want
-        if ($settings.autoStart) {
-            await tick(); // Wait for state update
+        // 2. WAIT before switching modes. 
+        // This prevents the "Infinite Loop" crash by letting the UI render "0:00" first.
+        setTimeout(() => {
+            nextPhase();
+            processingCompletion = false; // Unlock
+        }, 500); // 0.5 second delay (feels natural)
+    }
+
+    async function nextPhase() {
+        // Logic: What comes next?
+        if ($timer.mode === 'pomodoro') {
+            // We just finished work. Time for a break.
+            const sessionsDone = completedToday + 1;
+            const interval = $settings?.longBreakInterval || 4;
+            
+            if (sessionsDone % interval === 0) {
+                applyMode('long');
+            } else {
+                applyMode('short');
+            }
+        } else {
+            // We just finished a break. Back to work.
+            applyMode('pomodoro');
+        }
+
+        // Auto-start if enabled
+        if ($settings?.autoStart) {
+            await tick(); // Wait for the DOM to update
             timer.start();
         }
     }
 
-    // Helper to switch modes and update time from Settings
-    function switchMode(mode) {
+    // Helper to safely apply mode and duration
+    function applyMode(mode) {
+        // 1. Update the Store Mode
         timer.setMode(mode);
         
-        // Map mode strings to settings properties
+        // 2. Get the correct minutes from settings
         let duration = 25;
-        if (mode === 'pomodoro') duration = $settings.pomodoro;
-        if (mode === 'short') duration = $settings.shortBreak;
-        if (mode === 'long') duration = $settings.longBreak;
+        if (mode === 'pomodoro') duration = $settings?.pomodoro || 25;
+        if (mode === 'short') duration = $settings?.shortBreak || 5;
+        if (mode === 'long') duration = $settings?.longBreak || 15;
         
+        // 3. Update the Store Time
         timer.setDuration(duration);
-        currentMinutes = duration; // Sync the ruler variable
+        
+        // 4. Update the local ruler variable
+        currentMinutes = duration;
     }
 
     // --- EDIT MODE START ---
     async function startEditing() {
         if ($timer.isRunning) return; 
-        
         isEditing = true;
-        currentMinutes = Math.floor($timer.timeLeft / 60);
+        currentMinutes = Math.floor($timer.timeLeft / 60) || 1;
         
         await tick();
-        
         if (scrollContainer) {
             const targetScroll = (currentMinutes - 1) * TICK_WIDTH;
             scrollContainer.scrollLeft = targetScroll;
@@ -108,12 +118,11 @@
     // --- SCROLL HANDLER ---
     function handleScroll() {
         if (!scrollContainer) return;
-        const scrollLeft = scrollContainer.scrollLeft;
-        let rawValue = Math.round(scrollLeft / TICK_WIDTH) + 1;
+        let rawValue = Math.round(scrollContainer.scrollLeft / TICK_WIDTH) + 1;
         currentMinutes = Math.max(1, Math.min(MAX_TIME, rawValue));
     }
 
-    // --- DRAG PHYSICS (Unchanged) ---
+    // --- DRAG PHYSICS ---
     let isDragging = false;
     let startX, startScrollLeft;
 
@@ -144,9 +153,17 @@
         scrollContainer.scrollLeft = startScrollLeft - walk;
     }
 
-    // --- SAVE ---
+    // --- SAVE EDIT ---
     function saveEdit() {
         timer.setDuration(currentMinutes);
+        // Also update the global settings for this mode
+        settings.update(s => {
+            const newS = { ...s };
+            if ($timer.mode === 'pomodoro') newS.pomodoro = currentMinutes;
+            if ($timer.mode === 'short') newS.shortBreak = currentMinutes;
+            if ($timer.mode === 'long') newS.longBreak = currentMinutes;
+            return newS;
+        });
         isEditing = false;
     }
 </script>
@@ -178,14 +195,14 @@
     </div>
 
     <div class="modes">
-        <button on:click={() => switchMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
-        <button on:click={() => switchMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
-        <button on:click={() => switchMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
+        <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
+        <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
+        <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
     </div>
 
     {#if $timer.mode === 'pomodoro'}
         <div class="cycle-info">
-            Session { (completedToday % ($settings.longBreakInterval || 4)) + 1 } of { $settings.longBreakInterval || 4 }
+            Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
         </div>
     {/if}
 </div>
