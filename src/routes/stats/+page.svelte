@@ -41,7 +41,10 @@
     $: {
         const safeHistory = Array.isArray($history) ? $history : [];
         const safeTasks = Array.isArray($tasks) ? $tasks : [];
-        const allArchived = safeTasks.filter(t => t.status === 'archived' || t.status === 'review');
+        
+        // --- FIX: ONLY count 'archived' tasks as completed ---
+        // Removed: || t.status === 'review'
+        const allArchived = safeTasks.filter(t => t.status === 'archived');
 
         const currentDay = new Date(selectedDate);
         const weekStart = new Date(currentDay);
