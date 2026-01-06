@@ -138,6 +138,8 @@
         overflow: hidden; 
         min-height: 0; 
         
+        min-width: 0;
+        
         transition: background 0.2s;
     }
     .section:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); }
@@ -184,6 +186,10 @@
         /* 4. THE FIX: ADD PADDING ON ALL SIDES */
         /* This creates space for the "Upward Glow" and "Side Glow" */
         padding: 20px; 
+
+        display: flex;
+        flex-direction: column; 
+        gap: 15px;
     }
 
     /* Hide scrollbar for Chrome/Safari */
