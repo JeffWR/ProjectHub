@@ -8,6 +8,8 @@
 
     // Detect if this card is in the 'Done/Review' column
     $: isReview = task.status === 'review';
+    $: isTodo = task.status === 'todo';
+    $: isProgress = task.status === 'inprogress';
 
     // Calculate progress percentage (Only needed if NOT review)
     $: progressPct = task.estTime > 0 ? Math.min(100, (task.timeSpent / task.estTime) * 100) : 0;
@@ -55,7 +57,7 @@
         </div>
     </div>
 
-    {#if !isReview && (showProgress || task.timeSpent > 0)}
+    {#if isProgress && (showProgress || task.timeSpent > 0)}
         <div class="progress-section">
             <div class="progress-labels">
                 <span>Progress</span>
@@ -93,8 +95,19 @@
 
     /* Typography */
     h4 { margin: 0 0 8px 0; font-size: 1.1rem; color: #2d3436; font-weight: 700; }
-    .desc { font-size: 0.9rem; color: #636e72; margin: 0 0 15px 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    
+    .desc { 
+        font-size: 0.9rem; 
+        color: #636e72; 
+        margin: 0 0 15px 0; 
+        overflow: hidden; 
+        white-space: normal; 
+        word-break: break-word;  
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
     /* Header */
     .card-top { display: flex; align-items: center; margin-bottom: 12px; }
     .priority-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
