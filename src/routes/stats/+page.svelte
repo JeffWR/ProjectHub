@@ -56,7 +56,7 @@
         selectedDate = newD;
     };
 
-    // --- 3. DATA PROCESSING ---
+    // --- 4. DATA PROCESSING ---
     let stats = { todayFocus: 0, weekFocusHrs: 0, todayTasks: 0, activeTasks: 0, totalHours: 0, avgPomo: 25, totalArchived: 0 };
     let weekData = [];
     let timeline = [];
