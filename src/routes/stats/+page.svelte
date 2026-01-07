@@ -71,8 +71,6 @@
         const safeHistory = Array.isArray($history) ? $history : [];
         const safeTasks = Array.isArray($tasks) ? $tasks : [];
         
-        // --- FIX: ONLY count 'archived' tasks as completed ---
-        // Removed: || t.status === 'review'
         const allArchived = safeTasks.filter(t => t.status === 'archived');
 
         const currentDay = new Date(selectedDate);
