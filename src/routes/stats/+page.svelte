@@ -16,10 +16,33 @@
                d1.getMonth() === d2.getMonth() &&
                d1.getDate() === d2.getDate();
     };
+    let listContainer;
+    let isExpanded = false;
+    let isClosing = false; // New flag to track animation
 
+    async function toggleExpand() {
+        if (isExpanded) {
+            // --- CASE: CLOSING (Show Less) ---
+            isClosing = true; // 1. Start the mask animation immediately
+            
+            // 2. Start the smooth scroll up
+            if (listContainer) {
+                listContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            // 3. Wait for the scroll (300ms) before actually shrinking the box
+            setTimeout(() => {
+                isExpanded = false;
+                isClosing = false; // Reset flag
+            }, 300);
+
+        } else {
+            // --- CASE: OPENING ---
+            isExpanded = true;
+        }
+    }
     // --- 2. STATE ---
     let selectedDate = new Date();
-    let isExpanded = false;
 
     const changeDate = (days) => {
         const newD = new Date(selectedDate);
@@ -194,6 +217,8 @@
         const normalized = val / (maxTrendVal || 1);
         return (GRAPH_HEIGHT + PADDING) - (normalized * GRAPH_HEIGHT);
     };
+    
+
 </script>
 
 <div class="page-container">
@@ -243,7 +268,12 @@
 
             <div class="stat-box archive-box">
                 <h3>History</h3>
-                <div class="list-container">
+                
+                <div 
+                    class="list-container" 
+                    class:scroll-mode={isExpanded}
+                    bind:this={listContainer} 
+                >
                     {#each (isExpanded ? archiveList : archiveList.slice(0, 5)) as t (t.id)}
                         <div class="list-row">
                             <div class="row-main">
@@ -255,9 +285,11 @@
                     {/each}
                     {#if archiveList.length === 0}<div class="empty">No tasks yet.</div>{/if}
                 </div>
+
                 {#if archiveList.length > 5}
-                    <button class="expand-btn" on:click={() => isExpanded = !isExpanded}>
-                        <ChevronDown size={14}/> {isExpanded ? 'Less' : 'More'}
+                    <button class="expand-btn" on:click={toggleExpand}>
+                        <div class="arrow-wrap" class:flipped={isExpanded}> <ChevronDown size={14} /> </div>
+                        {isExpanded ? 'Show Less' : 'More'}
                     </button>
                 {/if}
             </div>
@@ -467,4 +499,104 @@
     .chart-wrapper { position: relative; flex: 1; width: 100%; min-height: 60px; }
     .line-chart { width: 100%; height: 100%; overflow: visible; }
     .legend { display: flex; justify-content: center; gap: 10px; margin-top: auto; font-size: 0.75rem; font-weight: 600; padding-top: 5px; }
+.list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        
+        /* 1. LIMIT HEIGHT & HIDE OVERFLOW */
+        max-height: 280px; 
+        overflow: hidden;
+
+        /* 2. PREPARE THE ANIMATION TRANSITIONS */
+        /* We transition height AND mask-position */
+        transition: max-height 0.3s ease, -webkit-mask-position 0.3s ease, mask-position 0.3s ease;
+
+        /* 3. THE MAGIC MASK SETUP */
+        /* A gradient that is solid black for the top 50%, then fades out */
+        -webkit-mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
+        mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
+        
+        /* Make the mask TALLER than the box */
+        -webkit-mask-size: 100% 200%;
+        mask-size: 100% 200%;
+
+        /* 4. DEFAULT STATE (COLLAPSED) */
+        /* Show the TOP part of the mask (which is 100% solid black) */
+        -webkit-mask-position: 0 0;
+        mask-position: 0 0;
+    }
+
+    /* THE SCROLL MODE (EXPANDED) */
+    .list-container.scroll-mode {
+        /* Keep height logic same */
+        overflow-y: auto;
+        padding-bottom: 20px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        /* 5. ACTIVE STATE */
+        /* Slide the mask UP so we see the bottom fade */
+        -webkit-mask-position: 0 100%;
+        mask-position: 0 100%;
+    }
+    
+    .list-container.scroll-mode::-webkit-scrollbar { display: none; }
+
+    /* Optional: Ensure text inside the list items doesn't blow up the width */
+    .list-row {
+        flex-shrink: 0; /* Prevent squishing */
+    }
+    .r-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px; /* Force long titles to truncate with "..." */
+        display: inline-block;
+        vertical-align: middle;
+    }
+    .expand-btn {
+        /* Ensure the button aligns the text and icon nicely */
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        /* ... your existing button styles ... */
+    }
+
+    .arrow-wrap {
+        display: flex;
+        align-items: center;
+        transition: transform 0.3s ease; /* Makes it spin smoothly */
+    }
+
+    .flipped {
+        transform: rotate(180deg); /* The actual flip */
+    }
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 30px;
+        width: 100%; max-width: 600px;
+        aspect-ratio: 4/3;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center;
+
+        /* 1. MAKE SURE YOU HAVE A SHADOW DEFINED ON THE BASE STATE */
+        /* (I added a nice subtle glass shadow here just in case) */
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2);
+
+        /* 2. THE FIX: Add 'box-shadow' to the transition list */
+        transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .glass-panel.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.95);
+
+        /* 3. THE FIX: Explicitly set the shadow to transparent when hidden */
+        /* This gives the browser a target to animate towards */
+        box-shadow: 0 0 0 transparent;
+    }
 </style>
