@@ -4,6 +4,7 @@
     import { settings } from '$lib/stores/settings';
     import { history, logSession } from '$lib/stores/history';
     import { tick } from 'svelte';
+    import { fade, scale } from 'svelte/transition'; // ADDED FOR ANIMATION
     
     // IMPORT FROM LIB
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
@@ -128,11 +129,52 @@
         });
         isEditing = false;
     }
+
+    // ==========================================
+    // --- FOCUS MODE (HOLD TO QUIT) LOGIC ---
+    // ==========================================
+    let isHolding = false;
+    let holdProgress = 0;
+    let holdFrame;
+    let holdStartTime;
+    const HOLD_DURATION = 2000; // 2 seconds
+
+    // Ring Calculations
+    const RADIUS = 140; 
+    const CIRCUMFERENCE = 2 * Math.PI * RADIUS; 
+    $: strokeDashoffset = CIRCUMFERENCE - (holdProgress / 100) * CIRCUMFERENCE;
+
+    function startHold() {
+        if (!$timer.isRunning) return;
+        isHolding = true;
+        holdStartTime = Date.now();
+        
+        function loop() {
+            if (!isHolding) return;
+            const elapsed = Date.now() - holdStartTime;
+            holdProgress = Math.min((elapsed / HOLD_DURATION) * 100, 100);
+
+            if (elapsed >= HOLD_DURATION) {
+                // HELD LONG ENOUGH -> STOP TIMER
+                timer.reset();
+                cancelHold();
+            } else {
+                holdFrame = requestAnimationFrame(loop);
+            }
+        }
+        holdFrame = requestAnimationFrame(loop);
+    }
+
+    function cancelHold() {
+        isHolding = false;
+        holdProgress = 0;
+        if (holdFrame) cancelAnimationFrame(holdFrame);
+    }
 </script>
 
 <svelte:window on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
-<div class="glass-panel" class:hidden={isEditing || showCompleteModal}>
+<div class="glass-panel" class:hidden={isEditing || showCompleteModal || $timer.isRunning}>
     <div class="task-pill">
         {#if activeTask}
             <span class="active-dot">●</span> Working on: <strong>{activeTask.title}</strong>
@@ -164,6 +206,55 @@
         </div>
     {/if}
 </div>
+
+{#if $timer.isRunning}
+    <div 
+        class="focus-overlay" 
+        transition:fade={{ duration: 300 }}
+        on:mousedown={startHold} 
+        on:mouseup={cancelHold} 
+        on:mouseleave={cancelHold}
+        on:touchstart|preventDefault={startHold}
+        on:touchend={cancelHold}
+        on:contextmenu|preventDefault
+    >
+        <div class="focus-content">
+            <div class="focus-task" in:scale={{ start: 0.9 }}>
+                {#if activeTask}
+                    {activeTask.title}
+                {:else}
+                    Focus Mode
+                {/if}
+            </div>
+
+            <div class="timer-wrapper" class:shaking={isHolding && holdProgress > 85}>
+                <svg class="progress-ring" width="320" height="320">
+                    <circle 
+                        stroke="rgba(255,255,255,0.1)" stroke-width="4" fill="transparent"
+                        r={RADIUS} cx="160" cy="160" 
+                    />
+                    <circle 
+                        class="progress-ring__circle"
+                        stroke="#ff4757" stroke-width="6" fill="transparent"
+                        r={RADIUS} cx="160" cy="160"
+                        stroke-dasharray={CIRCUMFERENCE}
+                        stroke-dashoffset={strokeDashoffset}
+                        style="opacity: {isHolding ? 1 : 0}"
+                    />
+                </svg>
+                <div class="big-time">{displayTime}</div>
+            </div>
+
+            <div class="instruction">
+                {#if isHolding}
+                    <span class="text-danger">Keep holding to stop...</span>
+                {:else}
+                    <span class="text-muted">Hold screen to stop</span>
+                {/if}
+            </div>
+        </div>
+    </div>
+{/if}
 
 {#if isEditing}
     <div class="fullscreen-overlay">
@@ -200,7 +291,7 @@
 {/if}
 
 <style>
-    /* Same styles as before, minus the modal styles since we moved them */
+    /* --- EXISTING STYLES --- */
     .glass-panel {
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(12px);
@@ -212,16 +303,10 @@
         text-align: center;
         transition: opacity 0.2s ease;
     }
-    .glass-panel.hidden { opacity: 0; pointer-events: none; }
+    .glass-panel.hidden { opacity: 0; pointer-events: none; } /* Used when running too */
     
-    .fullscreen-overlay {
-        position: fixed; inset: 0;
-        background: rgba(15, 15, 15, 0.9);
-        backdrop-filter: blur(20px);
-        z-index: 9999;
-        display: flex; justify-content: center; align-items: center;
-        animation: fadeIn 0.3s ease-out;
-    }
+    /* ... (Your existing Edit overlay styles remain here unchanged) ... */
+    .fullscreen-overlay { position: fixed; inset: 0; background: rgba(15, 15, 15, 0.9); backdrop-filter: blur(20px); z-index: 9999; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s ease-out; }
     .overlay-content { width: 100%; display: flex; flex-direction: column; align-items: center; }
     .edit-readout { margin-bottom: 40px; color: white; line-height: 1; }
     .edit-readout .val { font-size: 8rem; font-weight: 800; }
@@ -253,4 +338,29 @@
     .modes button.active { background: rgba(255,255,255,0.2); color: white; }
     .cycle-info { margin-top: 20px; font-size: 0.85rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* --- NEW FOCUS OVERLAY STYLES --- */
+    .focus-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: #000; /* Deep black for focus */
+        z-index: 9999;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        cursor: pointer; user-select: none; touch-action: none;
+    }
+    .focus-content { display: flex; flex-direction: column; align-items: center; gap: 40px; transform: translateY(-20px); }
+    .focus-task { font-size: 1.8rem; color: rgba(255,255,255,0.9); font-weight: 600; letter-spacing: 0.5px; text-align: center; max-width: 80vw; }
+    
+    .timer-wrapper { position: relative; width: 320px; height: 320px; display: flex; align-items: center; justify-content: center; }
+    .big-time { font-size: 7rem; font-weight: 200; font-variant-numeric: tabular-nums; color: white; z-index: 2; pointer-events: none; }
+    
+    .progress-ring { position: absolute; top: 0; left: 0; transform: rotate(-90deg); pointer-events: none; }
+    .progress-ring__circle { transition: stroke-dashoffset 0.05s linear, opacity 0.2s ease; stroke-linecap: round; }
+
+    .instruction { height: 24px; font-size: 0.9rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; pointer-events: none; }
+    .text-muted { color: rgba(255,255,255,0.3); }
+    .text-danger { color: #ff4757; animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    .shaking .big-time { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; color: #ff4757; }
+    @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
 </style>
