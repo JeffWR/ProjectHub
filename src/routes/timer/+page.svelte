@@ -4,14 +4,15 @@
     import { settings } from '$lib/stores/settings';
     import { history, logSession } from '$lib/stores/history';
     import { tick } from 'svelte';
-    import { fade, scale } from 'svelte/transition'; // ADDED FOR ANIMATION
-    
-    // IMPORT FROM LIB
+    import { fade, scale, fly } from 'svelte/transition';
+    import { cubicOut } from 'svelte/easing';
+
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
 
     // --- DISPLAY LOGIC ---
     $: minutes = Math.floor($timer.timeLeft / 60);
     $: seconds = $timer.timeLeft % 60;
+    // Format digits individually if needed, but tabular-nums handles the width
     $: displayTime = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     $: activeTask = $heroTask;
 
@@ -54,7 +55,6 @@
         }
     }
 
-    // --- HANDLERS FOR THE MODAL ---
     async function takeBreak() {
         showCompleteModal = false;
         nextPhase();
@@ -67,7 +67,6 @@
         setTimeout(() => { processingCompletion = false; }, 100);
     }
 
-    // --- PHASE SWITCHER ---
     async function nextPhase() {
         if ($timer.mode === 'pomodoro') {
             const sessionsDone = completedToday; 
@@ -137,10 +136,10 @@
     let holdProgress = 0;
     let holdFrame;
     let holdStartTime;
-    const HOLD_DURATION = 2000; // 2 seconds
+    const HOLD_DURATION = 2000; 
 
-    // Ring Calculations
-    const RADIUS = 140; 
+    // INCREASED SIZE to prevent overlap
+    const RADIUS = 220; 
     const CIRCUMFERENCE = 2 * Math.PI * RADIUS; 
     $: strokeDashoffset = CIRCUMFERENCE - (holdProgress / 100) * CIRCUMFERENCE;
 
@@ -155,7 +154,6 @@
             holdProgress = Math.min((elapsed / HOLD_DURATION) * 100, 100);
 
             if (elapsed >= HOLD_DURATION) {
-                // HELD LONG ENOUGH -> STOP TIMER
                 timer.reset();
                 cancelHold();
             } else {
@@ -174,43 +172,46 @@
 
 <svelte:window on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
-<div class="glass-panel" class:hidden={isEditing || showCompleteModal || $timer.isRunning}>
-    <div class="task-pill">
-        {#if activeTask}
-            <span class="active-dot">●</span> Working on: <strong>{activeTask.title}</strong>
-        {:else}
-            <span class="inactive">Drag a task to "In Focus" to start</span>
+{#if !isEditing && !showCompleteModal && !$timer.isRunning}
+    <div class="glass-panel" transition:fade={{ duration: 400 }}>
+        <div class="task-pill">
+            {#if activeTask}
+                <span class="active-dot">●</span> Working on: <strong>{activeTask.title}</strong>
+            {:else}
+                <span class="inactive">Drag a task to "In Focus" to start</span>
+            {/if}
+        </div>
+
+        <h1 class="timer-digits" on:click={startEditing} title="Click to edit">
+            {displayTime}
+        </h1>
+
+        <div class="controls">
+            <button class="btn-main" on:click={$timer.isRunning ? timer.pause : timer.start}>
+                {$timer.isRunning ? 'PAUSE' : 'START'}
+            </button>
+            <button class="btn-sec" on:click={timer.reset}>RESET</button>
+        </div>
+
+        <div class="modes">
+            <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
+            <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
+            <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
+        </div>
+
+        {#if $timer.mode === 'pomodoro'}
+            <div class="cycle-info">
+                Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
+            </div>
         {/if}
     </div>
-
-    <h1 class="timer-digits" on:click={startEditing} title="Click to edit">
-        {displayTime}
-    </h1>
-
-    <div class="controls">
-        <button class="btn-main" on:click={$timer.isRunning ? timer.pause : timer.start}>
-            {$timer.isRunning ? 'PAUSE' : 'START'}
-        </button>
-        <button class="btn-sec" on:click={timer.reset}>RESET</button>
-    </div>
-
-    <div class="modes">
-        <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
-        <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
-        <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
-    </div>
-
-    {#if $timer.mode === 'pomodoro'}
-        <div class="cycle-info">
-            Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
-        </div>
-    {/if}
-</div>
+{/if}
 
 {#if $timer.isRunning}
     <div 
         class="focus-overlay" 
-        transition:fade={{ duration: 300 }}
+        in:fade={{ duration: 800, easing: cubicOut }}
+        out:fade={{ duration: 600, easing: cubicOut }}
         on:mousedown={startHold} 
         on:mouseup={cancelHold} 
         on:mouseleave={cancelHold}
@@ -219,7 +220,7 @@
         on:contextmenu|preventDefault
     >
         <div class="focus-content">
-            <div class="focus-task" in:scale={{ start: 0.9 }}>
+            <div class="focus-task" in:fly={{ y: -20, duration: 1000, delay: 200 }}>
                 {#if activeTask}
                     {activeTask.title}
                 {:else}
@@ -228,20 +229,16 @@
             </div>
 
             <div class="timer-wrapper" class:shaking={isHolding && holdProgress > 85}>
-                <svg class="progress-ring" width="320" height="320">
-                    <circle 
-                        stroke="rgba(255,255,255,0.1)" stroke-width="4" fill="transparent"
-                        r={RADIUS} cx="160" cy="160" 
-                    />
+                <svg class="progress-ring" width="500" height="500" style="opacity: {isHolding ? 1 : 0}">
                     <circle 
                         class="progress-ring__circle"
-                        stroke="#ff4757" stroke-width="6" fill="transparent"
-                        r={RADIUS} cx="160" cy="160"
+                        stroke="#ff4757" stroke-width="4" fill="transparent"
+                        r={RADIUS} cx="250" cy="250"
                         stroke-dasharray={CIRCUMFERENCE}
                         stroke-dashoffset={strokeDashoffset}
-                        style="opacity: {isHolding ? 1 : 0}"
                     />
                 </svg>
+                
                 <div class="big-time">{displayTime}</div>
             </div>
 
@@ -249,7 +246,7 @@
                 {#if isHolding}
                     <span class="text-danger">Keep holding to stop...</span>
                 {:else}
-                    <span class="text-muted">Hold screen to stop</span>
+                    <span class="text-muted">Hold to Stop</span>
                 {/if}
             </div>
         </div>
@@ -257,7 +254,7 @@
 {/if}
 
 {#if isEditing}
-    <div class="fullscreen-overlay">
+    <div class="fullscreen-overlay" transition:fade={{ duration: 200 }}>
         <div class="overlay-content">
             <div class="edit-readout">
                 <span class="val">{currentMinutes}</span><span class="lbl">min</span>
@@ -301,12 +298,10 @@
         aspect-ratio: 4/3;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center;
-        transition: opacity 0.2s ease;
+        /* Removed transition here to let Svelte handle it */
     }
-    .glass-panel.hidden { opacity: 0; pointer-events: none; } /* Used when running too */
     
-    /* ... (Your existing Edit overlay styles remain here unchanged) ... */
-    .fullscreen-overlay { position: fixed; inset: 0; background: rgba(15, 15, 15, 0.9); backdrop-filter: blur(20px); z-index: 9999; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s ease-out; }
+    .fullscreen-overlay { position: fixed; inset: 0; background: rgba(15, 15, 15, 0.9); backdrop-filter: blur(20px); z-index: 9999; display: flex; justify-content: center; align-items: center; }
     .overlay-content { width: 100%; display: flex; flex-direction: column; align-items: center; }
     .edit-readout { margin-bottom: 40px; color: white; line-height: 1; }
     .edit-readout .val { font-size: 8rem; font-weight: 800; }
@@ -325,7 +320,17 @@
     .task-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
     .active-dot { color: #4caf50; font-size: 0.8rem; }
     .inactive { opacity: 0.6; font-style: italic; }
-    .timer-digits { font-size: 7rem; margin: 10px 0 30px 0; font-weight: 700; user-select: none; color: white; line-height: 1; cursor: pointer; transition: transform 0.1s; }
+    
+    /* DASHBOARD TIMER */
+    .timer-digits { 
+        font-size: 7rem; margin: 10px 0 30px 0; font-weight: 700; 
+        user-select: none; color: white; line-height: 1; cursor: pointer; 
+        transition: transform 0.1s; 
+        /* Enforce fixed width numbers here too */
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+    }
+    
     .timer-digits:hover { transform: scale(1.02); }
     .controls { display: flex; gap: 15px; margin-bottom: 40px; }
     .btn-main { background: white; color: #ba4949; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #e0e0e0; transition: transform 0.1s; }
@@ -337,28 +342,41 @@
     .modes button:hover { color: white; }
     .modes button.active { background: rgba(255,255,255,0.2); color: white; }
     .cycle-info { margin-top: 20px; font-size: 0.85rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* --- NEW FOCUS OVERLAY STYLES --- */
+    /* --- UPDATED FOCUS OVERLAY STYLES --- */
     .focus-overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: #000; /* Deep black for focus */
+        background: #000;
         z-index: 9999;
         display: flex; flex-direction: column; justify-content: center; align-items: center;
         cursor: pointer; user-select: none; touch-action: none;
     }
     .focus-content { display: flex; flex-direction: column; align-items: center; gap: 40px; transform: translateY(-20px); }
-    .focus-task { font-size: 1.8rem; color: rgba(255,255,255,0.9); font-weight: 600; letter-spacing: 0.5px; text-align: center; max-width: 80vw; }
+    .focus-task { font-size: 1.4rem; color: rgba(255,255,255,0.6); font-weight: 500; letter-spacing: 0.5px; text-align: center; max-width: 80vw; }
     
-    .timer-wrapper { position: relative; width: 320px; height: 320px; display: flex; align-items: center; justify-content: center; }
-    .big-time { font-size: 7rem; font-weight: 200; font-variant-numeric: tabular-nums; color: white; z-index: 2; pointer-events: none; }
+    .timer-wrapper { position: relative; width: 500px; height: 500px; display: flex; align-items: center; justify-content: center; }
     
-    .progress-ring { position: absolute; top: 0; left: 0; transform: rotate(-90deg); pointer-events: none; }
-    .progress-ring__circle { transition: stroke-dashoffset 0.05s linear, opacity 0.2s ease; stroke-linecap: round; }
+    /* FIXED NUMBERS & SMOOTHER FONT */
+    .big-time { 
+        font-size: 9rem; 
+        font-weight: 700; 
+        color: white; 
+        z-index: 2; 
+        pointer-events: none;
+        letter-spacing: -2px;
+        
+        /* THIS FIXES THE JITTERING */
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+    
+    .progress-ring { position: absolute; top: 0; left: 0; transform: rotate(-90deg); pointer-events: none; transition: opacity 0.3s ease; }
+    .progress-ring__circle { transition: stroke-dashoffset 0.05s linear; stroke-linecap: round; }
 
-    .instruction { height: 24px; font-size: 0.9rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; pointer-events: none; }
-    .text-muted { color: rgba(255,255,255,0.3); }
-    .text-danger { color: #ff4757; animation: pulse 1s infinite; }
+    .instruction { height: 24px; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; pointer-events: none; margin-top: -20px; opacity: 0.5; }
+    .text-muted { color: rgba(255,255,255,0.2); }
+    .text-danger { color: #ff4757; animation: pulse 1s infinite; opacity: 1; }
 
     @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     .shaking .big-time { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; color: #ff4757; }
