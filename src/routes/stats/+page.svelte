@@ -2,6 +2,7 @@
     import { tasks } from '$lib/stores/tasks';
     import { history } from '$lib/stores/history';
     import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-svelte';
+    import { onMount } from 'svelte';
 
     // --- 1. SAFE HELPERS ---
     const safeDate = (val) => {
@@ -10,7 +11,7 @@
         return isNaN(d.getTime()) ? null : d;
     };
 
-    // Helper to get "YYYY-MM-DD" in LOCAL time (fixes the timezone bug)
+    // Helper to get "YYYY-MM-DD" in LOCAL time (fixes timezone bugs)
     const getLocalDateStr = (dateObj) => {
         if (!dateObj) return '';
         const year = dateObj.getFullYear();
@@ -26,10 +27,11 @@
                d1.getDate() === d2.getDate();
     };
 
-    // --- 2. EXPAND/COLLAPSE LOGIC ---
+    // --- 2. UI STATE ---
     let listContainer;
     let isExpanded = false;
-    let isClosing = false; 
+    let isClosing = false;
+    let heatmapContainer; // Reference for auto-scrolling
 
     async function toggleExpand() {
         if (isExpanded) {
@@ -41,7 +43,15 @@
         }
     }
 
-    // --- 3. STATE ---
+    // Scroll heatmap to center on load
+    onMount(() => {
+        if (heatmapContainer) {
+            // Scroll to the middle (approx where "Today" is)
+            heatmapContainer.scrollLeft = (heatmapContainer.scrollWidth - heatmapContainer.clientWidth) / 2;
+        }
+    });
+
+    // --- 3. DATE NAVIGATION ---
     let selectedDate = new Date();
 
     const changeDate = (days) => {
@@ -62,7 +72,11 @@
     let archiveList = [];
     let heatmapData = []; 
     let rhythmData = []; 
+    
+    // Priority Data
     let lineGraphData = []; 
+    let priorityPercents = { High: 0, Medium: 0, Low: 0 };
+    
     let maxRhythmVal = 1;
     let maxTrendVal = 1;
 
@@ -73,7 +87,7 @@
 
         const currentDay = new Date(selectedDate);
         const weekStart = new Date(currentDay);
-        weekStart.setDate(currentDay.getDate() - currentDay.getDay());
+        weekStart.setDate(currentDay.getDate() - currentDay.getDay()); // Start on Sunday
         weekStart.setHours(0,0,0,0);
 
         const todaysSessions = safeHistory.filter(h => isSameDay(safeDate(h.date), currentDay));
@@ -82,7 +96,7 @@
             return d && d >= weekStart && d < new Date(weekStart.getTime() + 7 * 86400000);
         });
 
-        // --- TIMELINE ---
+        // --- TIMELINE LOGIC ---
         timelineSessions = todaysSessions.map(session => {
             const d = safeDate(session.date);
             if (!d) return null;
@@ -100,8 +114,7 @@
             };
         }).filter(Boolean);
 
-        // --- HEATMAP (UPDATED LOGIC) ---
-        // 1. Map all history to Local Date Strings
+        // --- HEATMAP LOGIC (Centered on Today) ---
         const historyMap = {};
         safeHistory.forEach(h => {
             const d = safeDate(h.date);
@@ -111,44 +124,33 @@
             }
         });
 
-        // 2. Build Grid (52 Weeks, ending today)
         let tempHeatmap = [];
-        
-        // Find the start date: Go back 52 weeks, then find the Sunday of that week
-        const anchorDate = new Date(); // Today
-        // Align to previous Sunday to start the grid cleanly
+        const anchorDate = new Date(); 
         const dayOfWeek = anchorDate.getDay(); 
         const startHeat = new Date(anchorDate);
-        startHeat.setDate(anchorDate.getDate() - dayOfWeek - (51 * 7)); 
+        startHeat.setDate(anchorDate.getDate() - dayOfWeek - (26 * 7)); 
 
-        for (let w = 0; w < 52; w++) {
+        for (let w = 0; w < 53; w++) {
             let week = [];
             for (let d = 0; d < 7; d++) {
                 const dateStr = getLocalDateStr(startHeat);
                 const minutes = historyMap[dateStr] || 0;
+                const isToday = isSameDay(startHeat, anchorDate);
                 
-                // GitHub-style Intensity Levels
-                // 0 = None, 1 = Little, 2 = Moderate, 3 = High, 4 = Intense
                 let intensity = 0;
                 if (minutes > 0) intensity = 1;
                 if (minutes >= 30) intensity = 2;
                 if (minutes >= 60) intensity = 3;
                 if (minutes >= 120) intensity = 4;
 
-                week.push({ 
-                    intensity, 
-                    date: dateStr, 
-                    minutes 
-                });
-                
-                // Move to next day
+                week.push({ intensity, date: dateStr, minutes, isToday });
                 startHeat.setDate(startHeat.getDate() + 1);
             }
             tempHeatmap.push(week);
         }
         heatmapData = tempHeatmap;
 
-        // --- RHYTHM & TRENDS (Preserved) ---
+        // --- RHYTHM ---
         let tempRhythm = [];
         let rMax = 0;
         for (let i = 6; i >= 0; i--) {
@@ -160,36 +162,55 @@
             const daySessions = safeHistory.filter(h => isSameDay(safeDate(h.date), d));
             let avgH = 0;
             if (daySessions.length) avgH = daySessions.reduce((a,h) => a + new Date(h.date).getHours(), 0) / daySessions.length;
+            
             tempRhythm.push({ label: d.toLocaleDateString('en-US', {weekday:'short'}), tasks: done, hours: hrs, time: avgH });
             rMax = Math.max(rMax, done, hrs);
         }
         rhythmData = tempRhythm;
         maxRhythmVal = rMax > 0 ? rMax : 5;
 
-        const monthMap = {}; 
-        allArchived.forEach(t => {
-            const d = safeDate(t.completedAt || t.createdAt);
-            if (d) {
-                const k = `${d.getFullYear()}-${d.getMonth()}`;
-                if (!monthMap[k]) monthMap[k] = { High: 0, Medium: 0, Low: 0 };
-                const p = t.priority === 'High' ? 'High' : t.priority === 'Low' ? 'Low' : 'Medium';
-                monthMap[k][p]++;
-            }
-        });
+        // --- PRIORITY TRENDS (UPDATED: Last 7 Days) ---
         let tempLine = [];
         let tMax = 0;
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
-            const k = `${d.getFullYear()}-${d.getMonth()}`;
-            const data = monthMap[k] || { High: 0, Medium: 0, Low: 0 };
-            tempLine.push({ label: d.toLocaleString('default', { month: 'short' }), ...data });
-            tMax = Math.max(tMax, data.High, data.Medium, data.Low);
-        }
-        lineGraphData = tempLine;
-        maxTrendVal = tMax > 0 ? tMax : 5;
+        let pCounts = { High: 0, Medium: 0, Low: 0 }; // Counts for the whole week
 
-        // --- STATS ---
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            
+            // Get tasks for this specific day
+            const dailyTasks = allArchived.filter(t => isSameDay(safeDate(t.completedAt), d));
+            
+            const counts = { High: 0, Medium: 0, Low: 0 };
+            
+            dailyTasks.forEach(t => {
+                const p = (t.priority || 'Medium').charAt(0).toUpperCase() + (t.priority || 'Medium').slice(1).toLowerCase();
+                if (counts[p] !== undefined) {
+                    counts[p]++;
+                    pCounts[p]++; // Add to total
+                }
+            });
+
+            tempLine.push({ 
+                label: d.toLocaleDateString('en-US', { weekday: 'short' }), 
+                ...counts 
+            });
+            
+            tMax = Math.max(tMax, counts.High, counts.Medium, counts.Low);
+        }
+        
+        lineGraphData = tempLine;
+        maxTrendVal = tMax > 0 ? tMax : 3;
+
+        // Calculate Percentages
+        const totalP = pCounts.High + pCounts.Medium + pCounts.Low;
+        priorityPercents = {
+            High: totalP ? Math.round((pCounts.High / totalP) * 100) : 0,
+            Medium: totalP ? Math.round((pCounts.Medium / totalP) * 100) : 0,
+            Low: totalP ? Math.round((pCounts.Low / totalP) * 100) : 0
+        };
+
+        // --- STATS SUMMARY ---
         const totalMins = safeHistory.reduce((a,b)=>a+(b.duration||0), 0);
         stats = {
             todayFocus: todaysSessions.length,
@@ -217,7 +238,7 @@
         }));
     }
 
-    // --- GRAPH HELPERS ---
+    // --- GRAPH DRAWING HELPERS ---
     const GRAPH_HEIGHT = 60;
     const PADDING = 5; 
     
@@ -343,6 +364,7 @@
                             <div 
                                 class="event-block"
                                 style="top: {t.top}px; height: {t.height}px;"
+                                title="{t.label}&#10;{selectedDate.toLocaleDateString()} • {t.timeRange} ({t.duration}m)"
                             >
                                 <div class="ev-content">
                                     <span class="ev-time">{t.timeRange}</span>
@@ -360,19 +382,21 @@
         </div>
 
         <div class="column right-col">
+            
             <div class="stat-box heatmap-box">
                 <div class="box-header">
                     <h3>Focus Activity</h3>
-                    <span style="font-size: 0.7rem; opacity: 0.6">Past Year</span>
+                    <span style="font-size: 0.7rem; opacity: 0.6">Past & Future</span>
                 </div>
                 
-                <div class="heatmap-container">
+                <div class="heatmap-container" bind:this={heatmapContainer}>
                     <div class="heatmap-grid">
                         {#each heatmapData as week}
                             <div class="heat-col">
                                 {#each week as day}
                                     <div 
                                         class="heat-cell level-{day.intensity}" 
+                                        class:is-today={day.isToday}
                                         title="{day.date}: {day.minutes} mins"
                                     ></div>
                                 {/each}
@@ -428,26 +452,48 @@
             </div>
 
             <div class="stat-box flex-box">
-                <h3>Priority Trends</h3>
+                <div class="box-header">
+                    <h3>Priority Trends</h3>
+                    <span style="font-size: 0.7rem; opacity: 0.6">Last 7 Days</span>
+                </div>
+
                 <div class="chart-wrapper">
                     <svg viewBox="0 0 300 90" class="line-chart">
-                        <polyline fill="none" stroke="#f44336" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.High)}`).join(' ')} />
-                        <polyline fill="none" stroke="#ff9800" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.Medium)}`).join(' ')} />
-                        <polyline fill="none" stroke="#4caf50" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.Low)}`).join(' ')} />
-                        {#each lineGraphData as d, i}
-                            <circle cx={i * 50 + 25} cy={getTrendY(d.High)} r="3" fill="#f44336" />
-                            <circle cx={i * 50 + 25} cy={getTrendY(d.Medium)} r="3" fill="#ff9800" />
-                            <circle cx={i * 50 + 25} cy={getTrendY(d.Low)} r="3" fill="#4caf50" />
+                        {#each [0, 25, 50, 75] as y}
+                            <line x1="0" y1={y} x2="300" y2={y} stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
                         {/each}
+
+                        <polyline fill="none" stroke="#f44336" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50},${getTrendY(d.High)}`).join(' ')} />
+                        <polyline fill="none" stroke="#ff9800" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50},${getTrendY(d.Medium)}`).join(' ')} />
+                        <polyline fill="none" stroke="#4caf50" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50},${getTrendY(d.Low)}`).join(' ')} />
+                        
                         {#each lineGraphData as d, i}
-                            <text x={i * 50 + 25} y="85" font-size="10" fill="rgba(255,255,255,0.5)" text-anchor="middle">{d.label}</text>
+                            <circle cx={i * 50} cy={getTrendY(d.High)} r="3" fill="#f44336" />
+                            <circle cx={i * 50} cy={getTrendY(d.Medium)} r="3" fill="#ff9800" />
+                            <circle cx={i * 50} cy={getTrendY(d.Low)} r="3" fill="#4caf50" />
+                        {/each}
+                        
+                        {#each lineGraphData as d, i}
+                            <text x={i * 50} y="88" font-size="9" fill="rgba(255,255,255,0.4)" text-anchor="middle">{d.label}</text>
                         {/each}
                     </svg>
                 </div>
-                <div class="legend">
-                    <span style="color:#f44336">High</span>
-                    <span style="color:#ff9800">Med</span>
-                    <span style="color:#4caf50">Low</span>
+
+                <div class="priority-summary">
+                    <div class="p-stat">
+                        <span class="p-val" style="color:#f44336">{priorityPercents.High}%</span>
+                        <span class="p-lbl">High</span>
+                    </div>
+                    <div class="p-sep"></div>
+                    <div class="p-stat">
+                        <span class="p-val" style="color:#ff9800">{priorityPercents.Medium}%</span>
+                        <span class="p-lbl">Med</span>
+                    </div>
+                    <div class="p-sep"></div>
+                    <div class="p-stat">
+                        <span class="p-val" style="color:#4caf50">{priorityPercents.Low}%</span>
+                        <span class="p-lbl">Low</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -541,29 +587,82 @@
     .grid-hour { position: absolute; left: 0; right: 0; display: flex; align-items: flex-start; padding-top: 5px; }
     .grid-label { width: 50px; text-align: right; padding-right: 15px; font-size: 0.75rem; color: rgba(255,255,255,0.3); }
     .grid-line { flex: 1; border-top: 1px solid rgba(255,255,255,0.05); height: 100%; }
-    .event-block { position: absolute; left: 60px; right: 15px; background: rgba(255,118,117,0.15); border-left: 3px solid #ff7675; border-radius: 4px; padding: 2px 8px; overflow: hidden; z-index: 10; transition: top 0.2s, height 0.2s; }
-    .ev-content { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+    
+    .event-block { 
+        position: absolute; left: 60px; right: 15px; 
+        background: rgba(255,118,117,0.15); 
+        border-left: 3px solid #ff7675; 
+        border-radius: 4px; 
+        padding: 2px 8px; 
+        overflow: hidden; 
+        z-index: 10; 
+        transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1.2), box-shadow 0.15s, border-left-width 0.1s;
+        cursor: default; 
+    }
+    
+    /* THE POP EFFECT (TIMELINE HOVER) */
+    .event-block:hover {
+        transform: scale(1.02) translateY(-1px);
+        z-index: 50; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        border-left-width: 5px;
+        background: rgba(255,118,117,0.25);
+    }
+
+    .ev-content { display: flex; flex-direction: column; justify-content: center; height: 100%; pointer-events: none; }
     .ev-time { font-size: 0.65rem; color: rgba(255,255,255,0.6); line-height: 1; margin-bottom: 2px; }
     .ev-title { font-size: 0.8rem; font-weight: 600; color: #ff7675; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
     .now-indicator { position: absolute; left: 55px; right: 0; height: 1px; background: #0984e3; z-index: 20; box-shadow: 0 0 4px #0984e3; }
     .now-indicator::before { content: ''; position: absolute; left: -4px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #0984e3; }
 
-    /* RIGHT COLUMN WIDGETS - HEATMAP UPDATES */
+    /* --- RIGHT COLUMN WIDGETS --- */
+    
     .heatmap-box { height: auto; padding-bottom: 20px; flex-shrink: 0; }
     .heatmap-container { width: 100%; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
-    .heatmap-grid { display: flex; gap: 3px; height: auto; justify-content: flex-end; min-width: max-content; }
+    
+    .heatmap-grid { display: flex; gap: 3px; height: auto; min-width: max-content; }
+    
     .heat-col { display: flex; flex-direction: column; gap: 3px; }
     
-    /* NEW COLORS: Green Scale */
-    .heat-cell { width: 9px; height: 9px; border-radius: 2px; background: rgba(255,255,255,0.05); transition: all 0.2s; }
-    .heat-cell:hover { transform: scale(1.4); z-index: 10; border: 1px solid #fff; }
+    .heat-cell { 
+        width: 10px; height: 10px; 
+        border-radius: 2px; 
+        background: rgba(255,255,255,0.06); 
+        transition: transform 0.1s ease-in-out, border 0.1s, box-shadow 0.1s;
+        position: relative; 
+    }
+
+    .heat-cell:hover { 
+        transform: scale(1.6); 
+        z-index: 100; 
+        border: 1px solid rgba(255,255,255,0.9);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    }
+
+    .heat-cell.is-today {
+        border: 1px solid rgba(255,255,255,0.8);
+        position: relative;
+    }
+    .heat-cell.is-today::after {
+        content: '';
+        position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px;
+        border: 1px solid #ff7675;
+        border-radius: 3px;
+        animation: pulse 2s infinite;
+        pointer-events: none;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.1); }
+        100% { opacity: 1; transform: scale(1); }
+    }
     
-    /* GITHUB GREEN SCALE */
-    .level-0 { background: rgba(255,255,255,0.06); } /* Empty */
-    .level-1 { background: #0e4429; } /* Very Low */
-    .level-2 { background: #006d32; } /* Low */
-    .level-3 { background: #26a641; } /* Med */
-    .level-4 { background: #39d353; } /* High (Vibrant) */
+    .level-0 { background: rgba(255,255,255,0.06); }
+    .level-1 { background: rgba(255, 118, 117, 0.3); } 
+    .level-2 { background: rgba(255, 118, 117, 0.6); } 
+    .level-3 { background: #ff7675; } 
+    .level-4 { background: #d63031; } 
 
     .legend-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.5); margin: 10px 0 15px 0; }
     .legend-scale { display: flex; gap: 3px; }
@@ -572,7 +671,6 @@
     .s-item { flex: 1; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; text-align: center; }
     .s-item strong { display: block; font-size: 0.9rem; } .s-item label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.6; }
     
-    /* Other Graphs */
     .flex-box { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .rhythm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .rhythm-header h3 { margin: 0; font-size: 1rem; }
@@ -581,4 +679,19 @@
     .chart-wrapper { position: relative; flex: 1; width: 100%; min-height: 60px; }
     .line-chart { width: 100%; height: 100%; overflow: visible; }
     .legend { display: flex; justify-content: center; gap: 10px; margin-top: auto; font-size: 0.75rem; font-weight: 600; padding-top: 5px; }
+
+    /* PRIORITY PERCENTAGE FOOTER */
+    .priority-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        background: rgba(0,0,0,0.2);
+        margin-top: auto; 
+        padding: 8px 0;
+        border-radius: 8px;
+    }
+    .p-stat { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+    .p-val { font-size: 1.1rem; font-weight: 700; margin-bottom: 2px; }
+    .p-lbl { font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+    .p-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); }
 </style>
