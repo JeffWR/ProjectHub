@@ -10,6 +10,15 @@
         return isNaN(d.getTime()) ? null : d;
     };
 
+    // Helper to get "YYYY-MM-DD" in LOCAL time (fixes the timezone bug)
+    const getLocalDateStr = (dateObj) => {
+        if (!dateObj) return '';
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const isSameDay = (d1, d2) => {
         if (!d1 || !d2) return false;
         return d1.getFullYear() === d2.getFullYear() &&
@@ -17,32 +26,17 @@
                d1.getDate() === d2.getDate();
     };
 
-    // --- 2. EXPAND/COLLAPSE LOGIC (FASTER) ---
+    // --- 2. EXPAND/COLLAPSE LOGIC ---
     let listContainer;
     let isExpanded = false;
     let isClosing = false; 
 
     async function toggleExpand() {
         if (isExpanded) {
-            // --- CASE: CLOSING ---
-            // 1. Trigger '.closing' class -> Snaps mask to solid immediately
             isClosing = true; 
-            
-            // 2. Start scrolling up almost instantly (10ms)
-            setTimeout(() => {
-                if (listContainer) {
-                    listContainer.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            }, 5);
-
-            // 3. Wait only 200ms (matches CSS) before collapsing state
-            setTimeout(() => {
-                isExpanded = false;
-                isClosing = false; 
-            }, 100);
-
+            setTimeout(() => { if (listContainer) listContainer.scrollTo({ top: 0, behavior: 'smooth' }); }, 5);
+            setTimeout(() => { isExpanded = false; isClosing = false; }, 100);
         } else {
-            // --- CASE: OPENING ---
             isExpanded = true;
         }
     }
@@ -59,7 +53,12 @@
     // --- 4. DATA PROCESSING ---
     let stats = { todayFocus: 0, weekFocusHrs: 0, todayTasks: 0, activeTasks: 0, totalHours: 0, avgPomo: 25, totalArchived: 0 };
     let weekData = [];
-    let timeline = [];
+    
+    // TIMELINE DATA
+    let timelineSessions = []; 
+    const HOURS_IN_DAY = 24;
+    const PIXELS_PER_HOUR = 80;
+    
     let archiveList = [];
     let heatmapData = []; 
     let rhythmData = []; 
@@ -70,7 +69,6 @@
     $: {
         const safeHistory = Array.isArray($history) ? $history : [];
         const safeTasks = Array.isArray($tasks) ? $tasks : [];
-        
         const allArchived = safeTasks.filter(t => t.status === 'archived');
 
         const currentDay = new Date(selectedDate);
@@ -78,39 +76,79 @@
         weekStart.setDate(currentDay.getDate() - currentDay.getDay());
         weekStart.setHours(0,0,0,0);
 
-        // FILTERING
         const todaysSessions = safeHistory.filter(h => isSameDay(safeDate(h.date), currentDay));
         const weekSessions = safeHistory.filter(h => {
             const d = safeDate(h.date);
             return d && d >= weekStart && d < new Date(weekStart.getTime() + 7 * 86400000);
         });
 
-        // HEATMAP
+        // --- TIMELINE ---
+        timelineSessions = todaysSessions.map(session => {
+            const d = safeDate(session.date);
+            if (!d) return null;
+            const startMinutes = (d.getHours() * 60) + d.getMinutes();
+            const duration = session.duration || 25;
+            const endD = new Date(d.getTime() + duration * 60000);
+            const timeRange = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')} - ${endD.getHours()}:${endD.getMinutes().toString().padStart(2,'0')}`;
+
+            return {
+                ...session,
+                top: (startMinutes / 60) * PIXELS_PER_HOUR,
+                height: (duration / 60) * PIXELS_PER_HOUR,
+                timeRange,
+                label: session.taskTitle || 'Focus Session'
+            };
+        }).filter(Boolean);
+
+        // --- HEATMAP (UPDATED LOGIC) ---
+        // 1. Map all history to Local Date Strings
         const historyMap = {};
         safeHistory.forEach(h => {
             const d = safeDate(h.date);
-            if(d) historyMap[d.toISOString().split('T')[0]] = (historyMap[d.toISOString().split('T')[0]] || 0) + (h.duration || 25);
+            if(d) {
+                const dateKey = getLocalDateStr(d);
+                historyMap[dateKey] = (historyMap[dateKey] || 0) + (h.duration || 25);
+            }
         });
 
+        // 2. Build Grid (52 Weeks, ending today)
         let tempHeatmap = [];
-        const startHeat = new Date();
-        startHeat.setDate(new Date().getDate() - (52 * 7));
-        startHeat.setDate(startHeat.getDate() - startHeat.getDay());
+        
+        // Find the start date: Go back 52 weeks, then find the Sunday of that week
+        const anchorDate = new Date(); // Today
+        // Align to previous Sunday to start the grid cleanly
+        const dayOfWeek = anchorDate.getDay(); 
+        const startHeat = new Date(anchorDate);
+        startHeat.setDate(anchorDate.getDate() - dayOfWeek - (51 * 7)); 
 
         for (let w = 0; w < 52; w++) {
             let week = [];
             for (let d = 0; d < 7; d++) {
-                const dateStr = startHeat.toISOString().split('T')[0];
+                const dateStr = getLocalDateStr(startHeat);
                 const minutes = historyMap[dateStr] || 0;
-                let intensity = minutes > 200 ? 4 : minutes > 100 ? 3 : minutes > 50 ? 2 : minutes > 0 ? 1 : 0;
-                week.push({ intensity, date: dateStr });
+                
+                // GitHub-style Intensity Levels
+                // 0 = None, 1 = Little, 2 = Moderate, 3 = High, 4 = Intense
+                let intensity = 0;
+                if (minutes > 0) intensity = 1;
+                if (minutes >= 30) intensity = 2;
+                if (minutes >= 60) intensity = 3;
+                if (minutes >= 120) intensity = 4;
+
+                week.push({ 
+                    intensity, 
+                    date: dateStr, 
+                    minutes 
+                });
+                
+                // Move to next day
                 startHeat.setDate(startHeat.getDate() + 1);
             }
             tempHeatmap.push(week);
         }
         heatmapData = tempHeatmap;
 
-        // RHYTHM GRAPH
+        // --- RHYTHM & TRENDS (Preserved) ---
         let tempRhythm = [];
         let rMax = 0;
         for (let i = 6; i >= 0; i--) {
@@ -119,18 +157,15 @@
             const done = allArchived.filter(t => isSameDay(safeDate(t.completedAt || t.createdAt), d)).length;
             const mins = safeHistory.filter(h => isSameDay(safeDate(h.date), d)).reduce((a,b)=>a+(b.duration||0),0);
             const hrs = parseFloat((mins/60).toFixed(1));
-            
             const daySessions = safeHistory.filter(h => isSameDay(safeDate(h.date), d));
             let avgH = 0;
             if (daySessions.length) avgH = daySessions.reduce((a,h) => a + new Date(h.date).getHours(), 0) / daySessions.length;
-
             tempRhythm.push({ label: d.toLocaleDateString('en-US', {weekday:'short'}), tasks: done, hours: hrs, time: avgH });
             rMax = Math.max(rMax, done, hrs);
         }
         rhythmData = tempRhythm;
         maxRhythmVal = rMax > 0 ? rMax : 5;
 
-        // TRENDS
         const monthMap = {}; 
         allArchived.forEach(t => {
             const d = safeDate(t.completedAt || t.createdAt);
@@ -141,7 +176,6 @@
                 monthMap[k][p]++;
             }
         });
-
         let tempLine = [];
         let tMax = 0;
         for (let i = 5; i >= 0; i--) {
@@ -155,7 +189,7 @@
         lineGraphData = tempLine;
         maxTrendVal = tMax > 0 ? tMax : 5;
 
-        // STATS
+        // --- STATS ---
         const totalMins = safeHistory.reduce((a,b)=>a+(b.duration||0), 0);
         stats = {
             todayFocus: todaysSessions.length,
@@ -177,18 +211,13 @@
                 tasks: allArchived.filter(t => isSameDay(safeDate(t.completedAt), d)).length
             };
         });
-
-        timeline = Array(24).fill(null).map((_, h) => ({
-            hour: h,
-            session: todaysSessions.find(s => safeDate(s.date)?.getHours() === h)
-        }));
         
         archiveList = allArchived.reverse().map(t => ({
             ...t, dateStr: safeDate(t.completedAt || t.createdAt)?.toLocaleDateString() || 'Unknown'
         }));
     }
 
-    // --- COMPACT GRAPH SCALING ---
+    // --- GRAPH HELPERS ---
     const GRAPH_HEIGHT = 60;
     const PADDING = 5; 
     
@@ -201,7 +230,6 @@
             const y = (GRAPH_HEIGHT + PADDING) - (normalized * GRAPH_HEIGHT); 
             return [x, y];
         });
-
         let d = `M ${coords[0][0]} ${coords[0][1]}`;
         for (let i = 0; i < coords.length - 1; i++) {
             const p0 = coords[i === 0 ? 0 : i - 1];
@@ -221,8 +249,6 @@
         const normalized = val / (maxTrendVal || 1);
         return (GRAPH_HEIGHT + PADDING) - (normalized * GRAPH_HEIGHT);
     };
-    
-
 </script>
 
 <div class="page-container">
@@ -272,13 +298,7 @@
 
             <div class="stat-box archive-box">
                 <h3>History</h3>
-                
-                <div 
-                    class="list-container" 
-                    class:scroll-mode={isExpanded}
-                    class:closing={isClosing}
-                    bind:this={listContainer} 
-                >
+                <div class="list-container" class:scroll-mode={isExpanded} class:closing={isClosing} bind:this={listContainer}>
                     {#each (isExpanded ? archiveList : archiveList.slice(0, 5)) as t (t.id)}
                         <div class="list-row">
                             <div class="row-main">
@@ -290,7 +310,6 @@
                     {/each}
                     {#if archiveList.length === 0}<div class="empty">No tasks yet.</div>{/if}
                 </div>
-
                 {#if archiveList.length > 5}
                     <button class="expand-btn" on:click={toggleExpand}>
                         <div class="arrow-wrap" class:flipped={isExpanded}> <ChevronDown size={14} /> </div>
@@ -312,33 +331,68 @@
                 </div>
                 
                 <div class="timeline-scroll">
-                    {#each timeline as t}
-                        <div class="time-slot">
-                            <span class="hr">{t.hour}:00</span>
-                            <div class="slot-fill">
-                                {#if t.session}
-                                    <div class="session-pill">{t.session.taskTitle}</div>
-                                {/if}
+                    <div class="daily-grid" style="height: {HOURS_IN_DAY * PIXELS_PER_HOUR}px">
+                        {#each Array(HOURS_IN_DAY) as _, h}
+                            <div class="grid-hour" style="top: {h * PIXELS_PER_HOUR}px; height: {PIXELS_PER_HOUR}px;">
+                                <span class="grid-label">{h}:00</span>
+                                <div class="grid-line"></div>
                             </div>
-                        </div>
-                    {/each}
+                        {/each}
+
+                        {#each timelineSessions as t}
+                            <div 
+                                class="event-block"
+                                style="top: {t.top}px; height: {t.height}px;"
+                            >
+                                <div class="ev-content">
+                                    <span class="ev-time">{t.timeRange}</span>
+                                    <span class="ev-title">{t.label}</span>
+                                </div>
+                            </div>
+                        {/each}
+
+                        {#if isSameDay(selectedDate, new Date())}
+                            <div class="now-indicator" style="top: {((new Date().getHours() * 60) + new Date().getMinutes()) / 60 * PIXELS_PER_HOUR}px"></div>
+                        {/if}
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="column right-col">
-            
             <div class="stat-box heatmap-box">
-                <h3>Yearly Activity</h3>
-                <div class="heatmap-grid">
-                    {#each heatmapData as week}
-                        <div class="heat-col">
-                            {#each week as day}
-                                <div class="heat-cell level-{day.intensity}" title={day.date}></div>
-                            {/each}
-                        </div>
-                    {/each}
+                <div class="box-header">
+                    <h3>Focus Activity</h3>
+                    <span style="font-size: 0.7rem; opacity: 0.6">Past Year</span>
                 </div>
+                
+                <div class="heatmap-container">
+                    <div class="heatmap-grid">
+                        {#each heatmapData as week}
+                            <div class="heat-col">
+                                {#each week as day}
+                                    <div 
+                                        class="heat-cell level-{day.intensity}" 
+                                        title="{day.date}: {day.minutes} mins"
+                                    ></div>
+                                {/each}
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+
+                <div class="legend-row">
+                    <span>Less</span>
+                    <div class="legend-scale">
+                        <div class="heat-cell level-0"></div>
+                        <div class="heat-cell level-1"></div>
+                        <div class="heat-cell level-2"></div>
+                        <div class="heat-cell level-3"></div>
+                        <div class="heat-cell level-4"></div>
+                    </div>
+                    <span>More</span>
+                </div>
+
                 <div class="stats-summary">
                     <div class="s-item"><strong>{stats.avgPomo}m</strong><label>Avg</label></div>
                     <div class="s-item"><strong>{stats.totalHours}</strong><label>Hours</label></div>
@@ -361,11 +415,9 @@
                 <div class="chart-wrapper">
                     <svg viewBox="-10 -5 320 90" class="line-chart">
                         {#each [0, 20, 40, 60] as y}<line x1="0" y1={y} x2="300" y2={y} stroke="rgba(255,255,255,0.05)" stroke-width="1"/>{/each}
-                        
                         <path d={getSmoothPath(rhythmData, 'hours', maxRhythmVal)} fill="none" stroke="#0984e3" stroke-width="3" />
                         <path d={getSmoothPath(rhythmData, 'tasks', maxRhythmVal)} fill="none" stroke="#00b894" stroke-width="3" />
                         <path d={getSmoothPath(rhythmData, 'time', 24)} fill="none" stroke="#e17055" stroke-width="3" stroke-dasharray="4" />
-                        
                         {#each rhythmData as d, i}
                             {#if d.time > 0}
                                 <circle cx={(i/6)*300} cy={(60+5) - ((d.time/24)*60)} r="3" fill="#e17055"/>
@@ -382,13 +434,11 @@
                         <polyline fill="none" stroke="#f44336" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.High)}`).join(' ')} />
                         <polyline fill="none" stroke="#ff9800" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.Medium)}`).join(' ')} />
                         <polyline fill="none" stroke="#4caf50" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50 + 25},${getTrendY(d.Low)}`).join(' ')} />
-                        
                         {#each lineGraphData as d, i}
                             <circle cx={i * 50 + 25} cy={getTrendY(d.High)} r="3" fill="#f44336" />
                             <circle cx={i * 50 + 25} cy={getTrendY(d.Medium)} r="3" fill="#ff9800" />
                             <circle cx={i * 50 + 25} cy={getTrendY(d.Low)} r="3" fill="#4caf50" />
                         {/each}
-                        
                         {#each lineGraphData as d, i}
                             <text x={i * 50 + 25} y="85" font-size="10" fill="rgba(255,255,255,0.5)" text-anchor="middle">{d.label}</text>
                         {/each}
@@ -400,7 +450,6 @@
                     <span style="color:#4caf50">Low</span>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -454,108 +503,81 @@
 
     /* ARCHIVE BOX */
     .archive-box { flex: 1; display: flex; flex-direction: column; min-height: 200px; }
-    
     .list-container {
         display: flex; flex-direction: column; gap: 10px;
-        
-        /* 1. LIMIT HEIGHT */
-        max-height: 280px; 
-        overflow: hidden;
-
-        /* 2. FASTER ANIMATION (0.2s ease-out) */
+        max-height: 280px; overflow: hidden;
         transition: max-height 0.2s ease-out, -webkit-mask-position 0.2s ease-out, mask-position 0.2s ease-out;
-
-        /* 3. MASK SETUP */
         -webkit-mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
         mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
-        -webkit-mask-size: 100% 200%;
-        mask-size: 100% 200%;
-
-        /* 4. DEFAULT STATE (Top Half / Solid) */
-        -webkit-mask-position: 0 0;
-        mask-position: 0 0;
+        -webkit-mask-size: 100% 200%; -webkit-mask-position: 0 0; mask-position: 0 0;
     }
-
-    /* SCROLL MODE (EXPANDED) */
     .list-container.scroll-mode {
-        overflow-y: auto;
-        padding-bottom: 20px;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        /* 5. ACTIVE STATE (Bottom Half / Faded) */
-        -webkit-mask-position: 0 100%;
-        mask-position: 0 100%;
+        overflow-y: auto; padding-bottom: 20px;
+        scrollbar-width: none; -ms-overflow-style: none;
+        -webkit-mask-position: 0 100%; mask-position: 0 100%;
     }
     .list-container.scroll-mode::-webkit-scrollbar { display: none; }
-
-    /* CLOSING STATE: Snap mask to solid instantly */
-    .list-container.closing {
-        -webkit-mask-position: 0 0 !important;
-        mask-position: 0 0 !important;
-        /* KILL TRANSITION */
-        transition: none !important; 
-        overflow-y: hidden;
-    }
-
+    .list-container.closing { -webkit-mask-position: 0 0 !important; mask-position: 0 0 !important; transition: none !important; overflow-y: hidden; }
     .list-row { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
     .row-main { display: flex; flex-direction: column; gap: 2px; }
-    .r-title { 
-        font-size: 0.9rem; font-weight: 500; 
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        max-width: 180px; display: inline-block; vertical-align: middle;
-    }
+    .r-title { font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; display: inline-block; vertical-align: middle; }
     .r-date { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
     .r-time { font-size: 0.8rem; font-weight: 700; color: #4caf50; background: rgba(76,175,80,0.1); padding: 2px 8px; border-radius: 6px; }
-    .expand-btn { 
-        margin-top: 10px; width: 100%; padding: 8px; 
-        background: rgba(255,255,255,0.05); border: none; color: white; 
-        border-radius: 8px; cursor: pointer;
-        display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    
+    .expand-btn { margin-top: 10px; width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: none; color: white; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .arrow-wrap { display: flex; align-items: center; transition: transform 0.2s ease; }
     .flipped { transform: rotate(180deg); }
 
     /* TIMELINE */
     .mid-col { overflow: hidden; } 
     .mid-col .stat-box { height: 100%; padding: 0; display: flex; flex-direction: column; }
-    .timeline-nav { 
-        display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0,0,0,0.2); 
-        border-radius: 16px 16px 0 0; 
-    }
+    
+    .timeline-nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0,0,0,0.2); border-radius: 16px 16px 0 0; z-index: 2; position: relative; }
     .timeline-nav button { background: none; border: none; color: white; opacity: 0.7; cursor: pointer; }
     .date-disp { text-align: center; line-height: 1; }
     .dd { font-size: 1.4rem; font-weight: 800; display: block; } .mm { font-size: 0.8rem; text-transform: uppercase; color: rgba(255,255,255,0.6); }
-    
-    .timeline-scroll { 
-        flex: 1; overflow-y: auto; padding: 15px; 
-        scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 40px; 
-    }
+    .timeline-scroll { flex: 1; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; position: relative; }
     .timeline-scroll::-webkit-scrollbar { display: none; }
+    .daily-grid { position: relative; width: 100%; }
+    .grid-hour { position: absolute; left: 0; right: 0; display: flex; align-items: flex-start; padding-top: 5px; }
+    .grid-label { width: 50px; text-align: right; padding-right: 15px; font-size: 0.75rem; color: rgba(255,255,255,0.3); }
+    .grid-line { flex: 1; border-top: 1px solid rgba(255,255,255,0.05); height: 100%; }
+    .event-block { position: absolute; left: 60px; right: 15px; background: rgba(255,118,117,0.15); border-left: 3px solid #ff7675; border-radius: 4px; padding: 2px 8px; overflow: hidden; z-index: 10; transition: top 0.2s, height 0.2s; }
+    .ev-content { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+    .ev-time { font-size: 0.65rem; color: rgba(255,255,255,0.6); line-height: 1; margin-bottom: 2px; }
+    .ev-title { font-size: 0.8rem; font-weight: 600; color: #ff7675; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
+    .now-indicator { position: absolute; left: 55px; right: 0; height: 1px; background: #0984e3; z-index: 20; box-shadow: 0 0 4px #0984e3; }
+    .now-indicator::before { content: ''; position: absolute; left: -4px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #0984e3; }
 
-    .time-slot { display: flex; height: 50px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .hr { width: 50px; font-size: 0.8rem; color: rgba(255,255,255,0.4); text-align: right; padding-right: 15px; }
-    .slot-fill { flex: 1; height: 100%; position: relative; }
-    .session-pill { position: absolute; top: 5px; bottom: 5px; left: 0; right: 10px; background: rgba(255,118,117,0.2); border-left: 3px solid #ff7675; border-radius: 6px; padding: 0 12px; display: flex; align-items: center; font-size: 0.85rem; }
+    /* RIGHT COLUMN WIDGETS - HEATMAP UPDATES */
+    .heatmap-box { height: auto; padding-bottom: 20px; flex-shrink: 0; }
+    .heatmap-container { width: 100%; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+    .heatmap-grid { display: flex; gap: 3px; height: auto; justify-content: flex-end; min-width: max-content; }
+    .heat-col { display: flex; flex-direction: column; gap: 3px; }
+    
+    /* NEW COLORS: Green Scale */
+    .heat-cell { width: 9px; height: 9px; border-radius: 2px; background: rgba(255,255,255,0.05); transition: all 0.2s; }
+    .heat-cell:hover { transform: scale(1.4); z-index: 10; border: 1px solid #fff; }
+    
+    /* GITHUB GREEN SCALE */
+    .level-0 { background: rgba(255,255,255,0.06); } /* Empty */
+    .level-1 { background: #0e4429; } /* Very Low */
+    .level-2 { background: #006d32; } /* Low */
+    .level-3 { background: #26a641; } /* Med */
+    .level-4 { background: #39d353; } /* High (Vibrant) */
 
-    /* RIGHT COLUMN WIDGETS */
-    .heatmap-box { height: auto; padding-bottom: 20px; flex-shrink: 0; } 
-    .heatmap-grid { display: flex; gap: 2px; overflow: hidden; margin-bottom: 10px; height: 60px; justify-content: center; }
-    .heat-col { display: flex; flex-direction: column; gap: 2px; }
-    .heat-cell { width: 6px; height: 6px; border-radius: 1px; background: rgba(255,255,255,0.1); }
-    .level-0 { background: rgba(255,255,255,0.05); } .level-1 { background: #ffcdd2; } .level-2 { background: #e57373; } .level-3 { background: #d32f2f; } .level-4 { background: #b71c1c; }
+    .legend-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.5); margin: 10px 0 15px 0; }
+    .legend-scale { display: flex; gap: 3px; }
+
     .stats-summary { display: flex; justify-content: space-between; gap: 5px; }
     .s-item { flex: 1; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; text-align: center; }
     .s-item strong { display: block; font-size: 0.9rem; } .s-item label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.6; }
-
-    .flex-box { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     
+    /* Other Graphs */
+    .flex-box { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .rhythm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .rhythm-header h3 { margin: 0; font-size: 1rem; }
     .legend-mini { font-size: 0.7rem; font-weight: 600; display: flex; gap: 10px; }
     .chart-labels-top { display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 5px; font-size: 0.65rem; color: rgba(255,255,255,0.5); }
-
     .chart-wrapper { position: relative; flex: 1; width: 100%; min-height: 60px; }
     .line-chart { width: 100%; height: 100%; overflow: visible; }
     .legend { display: flex; justify-content: center; gap: 10px; margin-top: auto; font-size: 0.75rem; font-weight: 600; padding-top: 5px; }
