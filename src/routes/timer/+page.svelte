@@ -9,7 +9,7 @@
 
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
 
-    // --- 1. CROSSFADE (Timer Digits Movement) ---
+    // --- 1. TRANSITIONS ---
     const [send, receive] = crossfade({
         duration: 1000, 
         easing: quintOut,
@@ -23,9 +23,8 @@
         };
     }
 
-    // --- 2. SOFT GRADIENT EXPANSION ---
-    // We animate from 0 to 4. 
-    // IMPORTANT: The CSS must also be set to scale(4) so it stays there when done.
+    // THE CLOUD TRANSITION
+    // Animates scale from 0 to 4. 
     function growWithGradient(node, { duration }) {
         return {
             duration,
@@ -36,20 +35,20 @@
         };
     }
 
-    // --- DISPLAY LOGIC ---
+    // --- 2. DISPLAY LOGIC ---
     $: minutes = Math.floor($timer.timeLeft / 60);
     $: seconds = $timer.timeLeft % 60;
     $: displayTime = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     $: activeTask = $heroTask;
 
-    // --- TIMELINE CONFIG ---
+    // --- 3. TIMELINE & EDIT LOGIC ---
     let isEditing = false;
     let scrollContainer;
     let currentMinutes = $settings?.pomodoro || 25;
     const TICK_WIDTH = 50; 
     const MAX_TIME = 120;  
 
-    // --- LOGIC: DATE / COMPLETION ---
+    // Logic: Date / Completion
     const isToday = (dateStr) => {
         const d = new Date(dateStr);
         const today = new Date();
@@ -57,7 +56,7 @@
     };
     $: completedToday = $history ? $history.filter(h => isToday(h.date)).length : 0;
 
-    // --- LOGIC: TIMER COMPLETION ---
+    // Logic: Timer Completion Handling
     let previousTime = -1;
     let processingCompletion = false; 
     let showCompleteModal = false;
@@ -115,7 +114,6 @@
         currentMinutes = duration;
     }
 
-    // --- LOGIC: EDITING ---
     async function startEditing() {
         if ($timer.isRunning) return; 
         isEditing = true;
@@ -142,13 +140,14 @@
         isEditing = false;
     }
 
+    // Drag-to-scroll logic for ruler
     let isDragging = false;
     let startX, startScrollLeft;
     function onMouseDown(e) { if (!isEditing || e.target.closest('button')) return; isDragging = true; startX = e.pageX; if (scrollContainer) { startScrollLeft = scrollContainer.scrollLeft; scrollContainer.style.scrollSnapType = 'none'; } document.body.style.cursor = 'grabbing'; }
     function onMouseUp() { if (!isDragging) return; isDragging = false; if (scrollContainer) scrollContainer.style.scrollSnapType = 'x mandatory'; document.body.style.cursor = 'default'; }
     function onMouseMove(e) { if (!isDragging || !scrollContainer) return; e.preventDefault(); const x = e.pageX; const walk = (x - startX) * 1.5; scrollContainer.scrollLeft = startScrollLeft - walk; }
 
-    // --- LOGIC: HOLD TO QUIT ---
+    // --- 4. HOLD TO QUIT LOGIC ---
     let isHolding = false;
     let holdProgress = 0;
     let holdFrame;
@@ -321,13 +320,28 @@
         aspect-ratio: 4/3;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center;
-        transition: opacity 0.8s ease, filter 0.8s ease;
+        /* Smooth scale transition for when focus mode starts */
+        transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+        
+        /* FIX: Ensure it never disappears so the cloud can cover it */
+        opacity: 1 !important; 
     }
     
     .glass-panel.dimmed { 
-        opacity: 0; 
-        filter: blur(10px); 
+        /* Disable clicks, slightly shrink to look like it's "behind" the cloud */
         pointer-events: none; 
+        transform: scale(0.98);
+    }
+
+    /* FIX FOR STATS PAGE: Add class="fluid-height" when viewing stats */
+    .glass-panel.fluid-height {
+        aspect-ratio: auto;
+        height: auto;
+        min-height: 600px;
+        justify-content: flex-start;
+        padding-top: 50px;
+        padding-bottom: 50px;
+        max-width: 800px; /* Optional: Stats usually look better wider */
     }
 
     /* --- FOCUS MODE BACKGROUND --- */
@@ -344,13 +358,12 @@
         width: 100vmin; height: 100vmin; 
         margin-left: -50vmin; margin-top: -50vmin;
         border-radius: 50%;
+        
+        /* The Gradient Ball */
         background: radial-gradient(closest-side, #000 0%, #050505 50%, transparent 100%);
         z-index: 9998;
 
-        /* IMPORTANT FIX: 
-           This ensures that when the animation ends, the element 
-           STAYS at 4x scale (covering the screen) instead of 
-           snapping back to small size. */
+        /* FIX: Scale to 4x by default so it stays big after transition ends */
         transform: scale(4); 
     }
 
