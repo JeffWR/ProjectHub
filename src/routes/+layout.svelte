@@ -1,6 +1,7 @@
 <script>
     import { page } from '$app/stores';
     import { Timer, ListTodo, BarChart3, Settings, LogIn, Hexagon } from 'lucide-svelte';
+    import { injectAnalytics } from '@vercel/analytics/sveltekit'
     import Toast from '$lib/components/Toast.svelte'; // Import the notification system
 </script>
 
