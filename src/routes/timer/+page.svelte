@@ -24,7 +24,6 @@
     }
 
     // THE CLOUD TRANSITION
-    // Animates scale from 0 to 4. 
     function growWithGradient(node, { duration }) {
         return {
             duration,
@@ -48,7 +47,6 @@
     const TICK_WIDTH = 50; 
     const MAX_TIME = 120;  
 
-    // Logic: Date / Completion
     const isToday = (dateStr) => {
         const d = new Date(dateStr);
         const today = new Date();
@@ -210,7 +208,6 @@
 
     <div class="controls" class:hidden={$timer.isRunning}>
         <button class="btn-main" on:click={timer.start}>START</button>
-        <button class="btn-sec" on:click={timer.reset}>RESET</button>
     </div>
 
     <div class="modes" class:hidden={$timer.isRunning}>
@@ -320,20 +317,15 @@
         aspect-ratio: 4/3;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center;
-        /* Smooth scale transition for when focus mode starts */
         transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
-        
-        /* FIX: Ensure it never disappears so the cloud can cover it */
         opacity: 1 !important; 
     }
     
     .glass-panel.dimmed { 
-        /* Disable clicks, slightly shrink to look like it's "behind" the cloud */
         pointer-events: none; 
         transform: scale(0.98);
     }
 
-    /* FIX FOR STATS PAGE: Add class="fluid-height" when viewing stats */
     .glass-panel.fluid-height {
         aspect-ratio: auto;
         height: auto;
@@ -341,7 +333,7 @@
         justify-content: flex-start;
         padding-top: 50px;
         padding-bottom: 50px;
-        max-width: 800px; /* Optional: Stats usually look better wider */
+        max-width: 800px; 
     }
 
     /* --- FOCUS MODE BACKGROUND --- */
@@ -358,12 +350,8 @@
         width: 100vmin; height: 100vmin; 
         margin-left: -50vmin; margin-top: -50vmin;
         border-radius: 50%;
-        
-        /* The Gradient Ball */
         background: radial-gradient(closest-side, #000 0%, #050505 50%, transparent 100%);
         z-index: 9998;
-
-        /* FIX: Scale to 4x by default so it stays big after transition ends */
         transform: scale(4); 
     }
 
@@ -428,9 +416,11 @@
     .task-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
     .active-dot { color: #4caf50; font-size: 0.8rem; }
     .inactive { opacity: 0.6; font-style: italic; }
+    
     .controls { display: flex; gap: 15px; margin-bottom: 40px; }
+    
     .btn-main { background: white; color: #ba4949; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #e0e0e0; transition: transform 0.1s; }
-    .btn-sec { background: rgba(255,255,255,0.2); color: white; border: none; padding: 15px 30px; font-size: 1rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    
     .modes { display: flex; gap: 10px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 12px; }
     .modes button { background: transparent; border: none; color: rgba(255,255,255,0.6); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
     .modes button.active { background: rgba(255,255,255,0.2); color: white; }
