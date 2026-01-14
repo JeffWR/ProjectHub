@@ -4,9 +4,9 @@
     import { settings } from '$lib/stores/settings';
     import { history, logSession } from '$lib/stores/history';
     import { tick } from 'svelte';
-    
-    import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js'; //Transition for timer
-    import { handleTimerCompletion, advancePhase, applyMode } from '$lib/components/timer/TimerLogic';
+    import { fade, fly, crossfade } from 'svelte/transition';
+    import { cubicOut, quintOut } from 'svelte/easing';
+    import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js'; //Transition for timer 
 
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
 
@@ -36,27 +36,23 @@
     let showCompleteModal = false;
 
     $: {
-        if (previousTime > 0 && $timer.timeLeft === 0 && !processingCompletion) onTimerComplete();
+        if (previousTime > 0 && $timer.timeLeft === 0 && !processingCompletion) handleTimerDone();
         previousTime = $timer.timeLeft;
     }
 
-    async function onTimerComplete() {
+    function handleTimerDone() {
         processingCompletion = true;
-        // Delegate logic to our new file
-        const result = await handleTimerCompletion($heroTask, completedToday);
-        
-        if (result.shouldShowModal) {
+        if ($timer.mode === 'pomodoro') {
+            logSession($settings?.pomodoro || 25, $heroTask?.id, $heroTask?.title || 'Focus');
             showCompleteModal = true;
         } else {
-            // If no modal needed (e.g. break finished), logic file already advanced phase
-            // We just need to reset our local flag
-            setTimeout(() => { processingCompletion = false; }, 100);
+            nextPhase(); 
         }
     }
 
     async function takeBreak() {
         showCompleteModal = false;
-        await advancePhase(completedToday);
+        nextPhase();
         setTimeout(() => { processingCompletion = false; }, 100);
     }
 
@@ -64,6 +60,32 @@
         showCompleteModal = false;
         applyMode('pomodoro');
         setTimeout(() => { processingCompletion = false; }, 100);
+    }
+
+    async function nextPhase() {
+        if ($timer.mode === 'pomodoro') {
+            const sessionsDone = completedToday; 
+            const interval = $settings?.longBreakInterval || 4;
+            if (sessionsDone % interval === 0) applyMode('long');
+            else applyMode('short');
+        } else {
+            applyMode('pomodoro');
+            setTimeout(() => { processingCompletion = false; }, 100);
+        }
+        if ($settings?.autoStart) {
+            await tick();
+            timer.start();
+        }
+    }
+
+    function applyMode(mode) {
+        timer.setMode(mode);
+        let duration = 25;
+        if (mode === 'pomodoro') duration = $settings?.pomodoro || 25;
+        if (mode === 'short') duration = $settings?.shortBreak || 5;
+        if (mode === 'long') duration = $settings?.longBreak || 15;
+        timer.setDuration(duration);
+        currentMinutes = duration;
     }
 
     async function startEditing() {

@@ -13,7 +13,7 @@ export const [send, receive] = crossfade({
 //The Scaling Effect (Used as a fallback for crossfade)
 function scale(node, { duration }) {
     return {
-        duration: 1000,
+        duration,
         css: t => `transform: scale(${t}); opacity: ${t}`
     };
 }
