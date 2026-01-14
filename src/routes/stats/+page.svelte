@@ -486,17 +486,14 @@
                 <div class="priority-summary">
                     <div class="p-stat">
                         <span class="p-val" style="color:#f44336">{priorityPercents.High}%</span>
-                        <span class="p-lbl">High</span>
                     </div>
                     <div class="p-sep"></div>
                     <div class="p-stat">
                         <span class="p-val" style="color:#ff9800">{priorityPercents.Medium}%</span>
-                        <span class="p-lbl">Med</span>
                     </div>
                     <div class="p-sep"></div>
                     <div class="p-stat">
                         <span class="p-val" style="color:#4caf50">{priorityPercents.Low}%</span>
-                        <span class="p-lbl">Low</span>
                     </div>
                 </div>
             </div>
