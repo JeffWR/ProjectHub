@@ -676,23 +676,40 @@
     .rhythm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .rhythm-header h3 { margin: 0; font-size: 1rem; }
     .legend-mini { font-size: 0.7rem; font-weight: 600; display: flex; gap: 10px; }
-    .chart-labels-top { display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 5px; font-size: 0.65rem; color: rgba(255,255,255,0.5); }
-    .chart-wrapper { position: relative; flex: 1; width: 100%; min-height: 60px; }
-    .line-chart { width: 100%; height: 100%; overflow: visible; }
-    .legend { display: flex; justify-content: center; gap: 10px; margin-top: auto; font-size: 0.75rem; font-weight: 600; padding-top: 5px; }
-
-    /* PRIORITY PERCENTAGE FOOTER */
-    .priority-summary {
+    .chart-labels-top { 
+        display: flex; 
+        justify-content: space-between; 
+        padding: 0 5px; /* Matches the SVG X alignment */
+        font-size: 0.6rem; 
+        color: rgba(255,255,255,0.4); 
+        margin-bottom: 5px; 
+    }
+    .chart-wrapper { 
+        flex: 1; 
+        min-height: 0; 
+        position: relative; 
+        /* Ensure SVG scales correctly */
         display: flex;
         align-items: center;
-        justify-content: space-around;
-        background: rgba(0,0,0,0.2);
-        margin-top: auto; 
-        padding: 8px 0;
-        border-radius: 8px;
     }
-    .p-stat { display: flex; flex-direction: column; align-items: center; line-height: 1; }
-    .p-val { font-size: 1.1rem; font-weight: 700; margin-bottom: 2px; }
+    .line-chart { 
+        width: 100%; 
+        height: 100%; 
+        overflow: visible; 
+    }
+    .legend { display: flex; justify-content: center; gap: 10px; margin-top: auto; font-size: 0.75rem; font-weight: 600; padding-top: 5px; }
+
+    .priority-summary { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        gap: 15px; 
+        margin-top: 5px; 
+        padding-top: 10px; 
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .p-stat { display: flex; flex-direction: column; align-items: center; }
+    .p-val { font-weight: 700; font-size: 0.9rem; }
+    .p-sep { width: 1px; height: 15px; background: rgba(255,255,255,0.1); }
     .p-lbl { font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.5); }
-    .p-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); }
 </style>
