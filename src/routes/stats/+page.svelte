@@ -452,29 +452,33 @@
             </div>
 
             <div class="stat-box flex-box">
-                <div class="box-header">
+                <div class="rhythm-header">
                     <h3>Priority Trends</h3>
-                    <span style="font-size: 0.7rem; opacity: 0.6">Last 7 Days</span>
+                    <div class="legend-mini">
+                        <span style="color:#f44336">High</span>
+                        <span style="color:#ff9800">Med</span>
+                        <span style="color:#4caf50">Low</span>
+                    </div>
+                </div>
+
+                <div class="chart-labels-top">
+                    {#each lineGraphData as d}<span>{d.label}</span>{/each}
                 </div>
 
                 <div class="chart-wrapper">
-                    <svg viewBox="0 0 300 90" class="line-chart">
-                        {#each [0, 25, 50, 75] as y}
+                    <svg viewBox="-10 -5 320 90" class="line-chart">
+                        {#each [0, 20, 40, 60] as y}
                             <line x1="0" y1={y} x2="300" y2={y} stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
                         {/each}
 
-                        <polyline fill="none" stroke="#f44336" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50},${getTrendY(d.High)}`).join(' ')} />
-                        <polyline fill="none" stroke="#ff9800" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50},${getTrendY(d.Medium)}`).join(' ')} />
-                        <polyline fill="none" stroke="#4caf50" stroke-width="2" points={lineGraphData.map((d, i) => `${i * 50},${getTrendY(d.Low)}`).join(' ')} />
+                        <path d={getSmoothPath(lineGraphData, 'High', maxTrendVal)} fill="none" stroke="#f44336" stroke-width="3" />
+                        <path d={getSmoothPath(lineGraphData, 'Medium', maxTrendVal)} fill="none" stroke="#ff9800" stroke-width="3" />
+                        <path d={getSmoothPath(lineGraphData, 'Low', maxTrendVal)} fill="none" stroke="#4caf50" stroke-width="3" />
                         
                         {#each lineGraphData as d, i}
-                            <circle cx={i * 50} cy={getTrendY(d.High)} r="3" fill="#f44336" />
-                            <circle cx={i * 50} cy={getTrendY(d.Medium)} r="3" fill="#ff9800" />
-                            <circle cx={i * 50} cy={getTrendY(d.Low)} r="3" fill="#4caf50" />
-                        {/each}
-                        
-                        {#each lineGraphData as d, i}
-                            <text x={i * 50} y="88" font-size="9" fill="rgba(255,255,255,0.4)" text-anchor="middle">{d.label}</text>
+                            <circle cx={(i/6)*300} cy={(65) - ((d.High/maxTrendVal)*60)} r="3" fill="#f44336" />
+                            <circle cx={(i/6)*300} cy={(65) - ((d.Medium/maxTrendVal)*60)} r="3" fill="#ff9800" />
+                            <circle cx={(i/6)*300} cy={(65) - ((d.Low/maxTrendVal)*60)} r="3" fill="#4caf50" />
                         {/each}
                     </svg>
                 </div>
