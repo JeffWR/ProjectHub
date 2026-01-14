@@ -181,7 +181,7 @@
 
 <svelte:window on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
-<div class="glass-panel" class:dimmed={$timer.isRunning || isEditing || showCompleteModal}>
+<div class="glass-panel" class:dimmed={$timer.isRunning || isEditing || showCompleteModal} in:fly={{ y: 20, duration: 400 }}>
     <div class="task-pill">
         {#if activeTask}
             <span class="active-dot">●</span> Working on: <strong>{activeTask.title}</strong>
