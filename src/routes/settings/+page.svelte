@@ -296,14 +296,14 @@
 <style>
     /* --- VARIABLES --- */
     :root {
-        --glass-bg: rgba(20, 20, 20, 0.75);
+        --glass-bg: rgba(255, 255, 255, 0.1);
         --glass-border: rgba(255, 255, 255, 0.08);
         --nav-bg: rgba(0, 0, 0, 0.2);
         --accent: #ff7675;
         --accent-hover: #e17055;
         --text-main: #ffffff;
-        --text-muted: rgba(255, 255, 255, 0.5);
-        --card-bg: rgba(255, 255, 255, 0.03);
+        --text-muted: rgba(255, 255, 255, 0.4);
+        --card-bg: rgba(0, 0, 0, 0.155);
         --card-hover: rgba(255, 255, 255, 0.06);
     }
 
@@ -324,9 +324,8 @@
         backdrop-filter: blur(30px);
         -webkit-backdrop-filter: blur(30px);
         
-        border: 1px solid var(--glass-border);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px;
-        box-shadow: 0 2px 2px rgba(0,0,0,0.5);
         color: var(--text-main);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         position: relative;
@@ -443,7 +442,7 @@
     .btn-text { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; text-decoration: underline; }
 
     .plan-card {
-        background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+        background: linear-gradient(135deg, rgba(0,0,0,0.4), var(--card-bg), rgba(0,0,0,0.4));
         border: 1px solid var(--glass-border); padding: 20px; border-radius: 16px;
         display: flex; justify-content: space-between; align-items: center;
     }
@@ -463,7 +462,7 @@
         background: rgba(255, 71, 87, 0.15); color: #ff6b81; border: none; padding: 14px;
         border-radius: 12px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: 0.2s;
     }
-    .btn-signout:hover { background: rgba(255, 71, 87, 0.25); }
+    .btn-signout:hover { background: var(--card-bg); }
     
     .spacer { height: 20px; border-bottom: 1px solid var(--glass-border); margin-bottom: 20px; }
 
