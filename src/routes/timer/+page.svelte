@@ -6,33 +6,9 @@
     import { tick } from 'svelte';
     import { fade, fly, crossfade } from 'svelte/transition';
     import { cubicOut, quintOut } from 'svelte/easing';
+    import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js';
 
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
-
-    // --- 1. TRANSITIONS ---
-    const [send, receive] = crossfade({
-        duration: 1000, 
-        easing: quintOut,
-        fallback: scale
-    });
-
-    function scale(node, { duration }) {
-        return {
-            duration,
-            css: t => `transform: scale(${t}); opacity: ${t}`
-        };
-    }
-
-    // THE CLOUD TRANSITION
-    function growWithGradient(node, { duration }) {
-        return {
-            duration,
-            css: t => {
-                const eased = cubicOut(t);
-                return `transform: scale(${eased * 4}); opacity: ${eased};`;
-            }
-        };
-    }
 
     // --- 2. DISPLAY LOGIC ---
     $: minutes = Math.floor($timer.timeLeft / 60);
