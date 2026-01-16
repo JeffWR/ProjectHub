@@ -4,9 +4,11 @@
     import { settings } from '$lib/stores/settings';
     import { history, logSession } from '$lib/stores/history';
     import { tick } from 'svelte';
-    import { fade, fly, crossfade } from 'svelte/transition';
-    import { cubicOut, quintOut } from 'svelte/easing';
-    import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js'; //Transition for timer 
+    import { fade, fly } from 'svelte/transition'; // Removed crossfade (moved to transitions.js)
+    
+    // --- 1. NEW IMPORTS ---
+    import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js';
+    import { handleTimerCompletion, advancePhase, applyMode } from '$lib/components/timer/TimerLogic';
 
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
 
@@ -30,63 +32,44 @@
     };
     $: completedToday = $history ? $history.filter(h => isToday(h.date)).length : 0;
 
-    // Logic: Timer Completion Handling
+    // --- REFACTORED TIMER COMPLETION HANDLING ---
     let previousTime = -1;
     let processingCompletion = false; 
     let showCompleteModal = false;
 
     $: {
-        if (previousTime > 0 && $timer.timeLeft === 0 && !processingCompletion) handleTimerDone();
+        // Updated to use the new wrapper function
+        if (previousTime > 0 && $timer.timeLeft === 0 && !processingCompletion) {
+             onTimerComplete();
+        }
         previousTime = $timer.timeLeft;
     }
 
-    function handleTimerDone() {
+    // New wrapper for the logic file
+    async function onTimerComplete() {
         processingCompletion = true;
-        if ($timer.mode === 'pomodoro') {
-            logSession($settings?.pomodoro || 25, $heroTask?.id, $heroTask?.title || 'Focus');
+        const result = await handleTimerCompletion($heroTask, completedToday);
+        
+        if (result.shouldShowModal) {
             showCompleteModal = true;
         } else {
-            nextPhase(); 
+            setTimeout(() => { processingCompletion = false; }, 100);
         }
     }
 
     async function takeBreak() {
         showCompleteModal = false;
-        nextPhase();
+        await advancePhase(completedToday); // Uses imported logic
         setTimeout(() => { processingCompletion = false; }, 100);
     }
 
     async function skipBreak() {
         showCompleteModal = false;
-        applyMode('pomodoro');
+        applyMode('pomodoro'); // Uses imported logic
         setTimeout(() => { processingCompletion = false; }, 100);
     }
 
-    async function nextPhase() {
-        if ($timer.mode === 'pomodoro') {
-            const sessionsDone = completedToday; 
-            const interval = $settings?.longBreakInterval || 4;
-            if (sessionsDone % interval === 0) applyMode('long');
-            else applyMode('short');
-        } else {
-            applyMode('pomodoro');
-            setTimeout(() => { processingCompletion = false; }, 100);
-        }
-        if ($settings?.autoStart) {
-            await tick();
-            timer.start();
-        }
-    }
-
-    function applyMode(mode) {
-        timer.setMode(mode);
-        let duration = 25;
-        if (mode === 'pomodoro') duration = $settings?.pomodoro || 25;
-        if (mode === 'short') duration = $settings?.shortBreak || 5;
-        if (mode === 'long') duration = $settings?.longBreak || 15;
-        timer.setDuration(duration);
-        currentMinutes = duration;
-    }
+    // --- OLD LOGIC FUNCTIONS REMOVED (handleTimerDone, nextPhase, applyMode) ---
 
     async function startEditing() {
         if ($timer.isRunning) return; 

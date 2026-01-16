@@ -37,7 +37,6 @@ export async function advancePhase(completedTodayCount) {
     
     if (currentMode === 'pomodoro') {
         // We just finished a Pomodoro, time for a break.
-        // Check if we hit the long break interval.
         const interval = currentSettings?.longBreakInterval || 4;
         
         if (completedTodayCount > 0 && completedTodayCount % interval === 0) {
