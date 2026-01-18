@@ -136,11 +136,9 @@
         <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
     </div>
 
-    {#if $timer.mode === 'pomodoro' && !$timer.isRunning}
-        <div class="cycle-info">
-            Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
-        </div>
-    {/if}
+    <div class="cycle-info">
+        Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
+    </div>
 </div>
 
 {#if $timer.isRunning}
