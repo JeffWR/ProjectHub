@@ -40,7 +40,6 @@
         dispatch('close');
     }
 
-    // Drag Logic
     function onMouseDown(e) { 
         if (e.target.closest('button')) return; 
         isDragging = true; 
