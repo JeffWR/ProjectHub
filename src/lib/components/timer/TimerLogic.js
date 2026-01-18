@@ -12,6 +12,8 @@ export async function handleTimerCompletion(heroTask, completedTodayCount) {
     const currentMode = get(timer).mode;
     const currentSettings = get(settings);
 
+    timer.reset(); 
+
     // 1. If Pomodoro finished, log it and request Modal
     if (currentMode === 'pomodoro') {
         logSession(
