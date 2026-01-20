@@ -66,7 +66,13 @@
             <div class="header"><h3>To Do</h3><span class="badge">{todoTasks.length}</span></div>
             <div class="scroll-area">
                 {#each todoTasks as task (task.id)}
-                    <div draggable="true" on:dragstart={(e) => handleDragStart(e, task.id)} role="listitem">
+                    <div 
+                        draggable="true" 
+                        on:dragstart={(e) => handleDragStart(e, task.id)} 
+                        on:dblclick={() => openTaskDetail(task)}
+                        role="listitem"
+                        title="Double-click to view details"
+                    >
                         <TaskItem {task} />
                     </div>
                 {/each}
@@ -82,7 +88,13 @@
         <div class="header highlight"><h3>In Focus</h3><span class="badge">{progressTasks.length}</span></div>
         <div class="scroll-area">
             {#each progressTasks as task, index (task.id)}
-                <div draggable="true" on:dragstart={(e) => handleDragStart(e, task.id)} role="listitem">
+                <div 
+                    draggable="true" 
+                    on:dragstart={(e) => handleDragStart(e, task.id)} 
+                    on:dblclick={() => openTaskDetail(task)}
+                    role="listitem"
+                    title="Double-click to view details"
+                >
                     <TaskItem 
                         {task} 
                         showProgress={true} 
@@ -106,7 +118,13 @@
             <div class="header"><h3>Review</h3><span class="badge">{reviewTasks.length}</span></div>
             <div class="scroll-area">
                 {#each reviewTasks as task (task.id)}
-                    <div draggable="true" on:dragstart={(e) => handleDragStart(e, task.id)} role="listitem">
+                    <div 
+                        draggable="true" 
+                        on:dragstart={(e) => handleDragStart(e, task.id)} 
+                        on:dblclick={() => openTaskDetail(task)}
+                        role="listitem"
+                        title="Double-click to view details"
+                    >
                         <TaskItem {task} />
                     </div>
                 {/each}
