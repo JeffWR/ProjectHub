@@ -2,9 +2,11 @@
     import { tasks, addTask, moveTask } from '$lib/stores/tasks';
     import TaskItem from '$lib/components/TaskItem.svelte';
     import TaskModal from '$lib/components/TaskModal.svelte';
+    import TaskDetailModal from '$lib/components/TaskDetailModal.svelte'; // <--- NEW IMPORT
     import { Plus, LayoutList } from 'lucide-svelte';
 
     let showModal = false;
+    let selectedTask = null; // <--- NEW STATE
 
     $: todoTasks = $tasks.filter(t => t.status === 'todo');
     $: progressTasks = $tasks.filter(t => t.status === 'inprogress');
@@ -22,17 +24,29 @@
     }
 
     function handleDrop(event, newStatus) {
-        event.preventDefault(); // REQUIRED to allow dropping
+        event.preventDefault(); 
         const id = parseInt(event.dataTransfer.getData('text/plain'));
         if (id) moveTask(id, newStatus);
     }
     
     function handleDragOver(event) {
-        event.preventDefault(); // REQUIRED to allow dropping
+        event.preventDefault(); 
+    }
+
+    // --- NEW: DOUBLE CLICK HANDLER ---
+    function openTaskDetail(task) {
+        selectedTask = task;
     }
 </script>
 
 <TaskModal isOpen={showModal} onClose={() => showModal = false} onSave={handleCreate} />
+
+{#if selectedTask}
+    <TaskDetailModal 
+        task={selectedTask} 
+        on:close={() => selectedTask = null} 
+    />
+{/if}
 
 <div class="grid-container">
     
