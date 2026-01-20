@@ -148,7 +148,6 @@
         gap: 20px;
         width: 100%; 
         max-width: 1400px; 
-        /* Fix the height so the inside can scroll */
         height: 85vh; 
         padding: 20px; 
         box-sizing: border-box;
@@ -156,7 +155,7 @@
 
     .col-left, .col-right { display: flex; flex-direction: column; gap: 20px; height: 100%; min-height: 0; }
     
-    /* SECTIONS (The Glass Cards) */
+    /* SECTIONS */
     .section {
         background: rgba(255, 255, 255, 0.1); 
         backdrop-filter: blur(10px);
@@ -165,13 +164,9 @@
         padding: 20px; 
         display: flex; 
         flex-direction: column; 
-        
-        /* Critical: Don't let the card grow endlessly */
         overflow: hidden; 
         min-height: 0; 
-        
         min-width: 0;
-        
         transition: background 0.2s;
     }
     .section:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); }
@@ -181,53 +176,27 @@
     /* --- THE SCROLLING & FADE MAGIC --- */
     .scroll-area { 
         flex: 1; 
-        min-height: 0; /* Allows flex child to shrink and scroll */
-        
-        /* 1. ENABLE SCROLLING */
-        overflow-y: auto; 
-        overflow-x: hidden;
-        
-        /* 2. THE FADE OUT EFFECT */
-        -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-        mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-
-        /* 3. Padding so the last item isn't cut off by the fade */
-        padding-bottom: 40px;
-    }
-
-    /* src/routes/tasks/+page.svelte */
-
-    /* --- THE SCROLLING & FADE MAGIC --- */
-    .scroll-area { 
-        flex: 1; 
         min-height: 0; 
-        
-        /* 1. ENABLE SCROLLING */
         overflow-y: auto; 
         overflow-x: hidden;
         
-        /* 2. HIDE SCROLLBAR */
-        scrollbar-width: none;  /* Firefox */
-        -ms-overflow-style: none;  /* IE */
+        /* HIDE SCROLLBAR */
+        scrollbar-width: none;  
+        -ms-overflow-style: none;  
         
-        /* 3. FADE EFFECT (Bottom only) */
-        /* We use a mask so the bottom tasks fade out gently */
+        /* FADE EFFECT */
         -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
         mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
 
-        /* 4. THE FIX: ADD PADDING ON ALL SIDES */
-        /* This creates space for the "Upward Glow" and "Side Glow" */
         padding: 20px; 
+        padding-bottom: 40px; /* Ensure last item isn't cut */
 
         display: flex;
         flex-direction: column; 
         gap: 15px;
     }
 
-    /* Hide scrollbar for Chrome/Safari */
-    .scroll-area::-webkit-scrollbar { 
-        display: none; 
-    }
+    .scroll-area::-webkit-scrollbar { display: none; }
 
     /* --- HEADERS & BUTTONS --- */
     .create-section { flex: 0 0 auto; }
