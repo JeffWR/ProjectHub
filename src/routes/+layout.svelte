@@ -1,10 +1,18 @@
 <script>
     import { page } from '$app/stores';
-    import { Timer, ListTodo, BarChart3, Settings, LogIn, Hexagon } from 'lucide-svelte';
-    import Toast from '$lib/components/Toast.svelte'; // Import the notification system
+    import { Timer, ListTodo, BarChart3, Hexagon, User } from 'lucide-svelte';
+    import Toast from '$lib/components/Toast.svelte'; 
+    import SettingsModal from '$lib/components/SettingsModal.svelte'; // <--- 1. IMPORT MODAL
+
+    // State to control the Settings/Profile popup
+    let showSettings = false;
 </script>
 
 <Toast />
+
+{#if showSettings}
+    <SettingsModal on:close={() => showSettings = false} />
+{/if}
 
 <div class="app-shell">
     <nav>
@@ -25,15 +33,14 @@
             <a href="/stats" class:active={$page.url.pathname === '/stats'}>
                 <BarChart3 size={18} /> Stats
             </a>
-            <a href="/settings" class:active={$page.url.pathname === '/settings'}>
-                <Settings size={18} /> Settings
-            </a>
-        </div>
+            </div>
 
         <div class="nav-right">
-            <button class="login-btn">
-                <span>Log In</span>
-                <LogIn size={18} />
+            <button class="profile-btn" on:click={() => showSettings = true}>
+                <span class="user-name">Focus User</span>
+                <div class="avatar-circle">
+                    <User size={18} />
+                </div>
             </button>
         </div>
     </nav>
@@ -46,7 +53,7 @@
 <style>
     :global(body) {
         margin: 0;
-        font-family: 'Poppins', sans-serif; /* Applied new font */
+        font-family: 'Poppins', sans-serif;
         background: linear-gradient(135deg, #ba4949 0%, #d65a5a 100%);
         color: white;
         height: 100vh;
@@ -60,31 +67,20 @@
         padding: 0 40px;
         display: flex;
         align-items: center;
-        justify-content: space-between; /* Pushes Left/Right to edges */
-        position: relative; /* Needed for absolute centering */
+        justify-content: space-between;
+        position: relative;
     }
 
     /* LEFT SECTION */
-    .nav-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        z-index: 10; /* Ensure it sits above anything else */
-    }
-    .logo-icon {
-        display: flex; align-items: center; justify-content: center;
-    }
-    .brand-name {
-        font-weight: 700;
-        font-size: 1.5rem;
-        letter-spacing: -0.5px;
-    }
+    .nav-left { display: flex; align-items: center; gap: 12px; z-index: 10; }
+    .logo-icon { display: flex; align-items: center; justify-content: center; }
+    .brand-name { font-weight: 700; font-size: 1.5rem; letter-spacing: -0.5px; }
 
-    /* CENTER SECTION (Absolute Centering) */
+    /* CENTER SECTION */
     .nav-center {
         position: absolute;
         left: 50%;
-        transform: translateX(-50%); /* Moves it back by 50% of its own width */
+        transform: translateX(-50%);
         display: flex;
         gap: 8px;
         background: rgba(255, 255, 255, 0.15);
@@ -116,28 +112,36 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
-    /* RIGHT SECTION */
-    .nav-right {
-        z-index: 10;
-    }
-    .login-btn {
-        background: transparent;
-        border: 1px solid rgba(255,255,255,0.4);
+    /* RIGHT SECTION (Updated for Profile Button) */
+    .nav-right { z-index: 10; }
+
+    .profile-btn {
+        background: rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
         color: white;
-        padding: 10px 20px;
+        padding: 6px 6px 6px 16px; /* Less padding right for the circle */
         border-radius: 30px;
         cursor: pointer;
         font-family: 'Poppins', sans-serif;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         transition: 0.2s;
     }
-    .login-btn:hover {
-        background: white;
-        color: #ba4949;
-        border-color: white;
+    
+    .profile-btn:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.4);
+    }
+
+    .user-name { font-size: 0.9rem; }
+
+    .avatar-circle {
+        width: 32px; height: 32px;
+        background: white; color: #ba4949;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
     }
 
     main {
