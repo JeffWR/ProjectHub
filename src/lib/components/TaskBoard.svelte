@@ -11,20 +11,26 @@
     $: reviewTasks = $tasks.filter(t => t.status === 'review');
 
     function handleDragStart(event, id) {
+        // ID is now a string (UUID), so we just pass it as text
         event.dataTransfer.setData('text/plain', id);
         event.dataTransfer.effectAllowed = 'move';
     }
 
     function handleZoneDrop(event, newStatus) {
-        const id = parseInt(event.dataTransfer.getData('text/plain'));
+        // FIX: Removed parseInt()
+        const id = event.dataTransfer.getData('text/plain');
         if (id) moveTask(id, newStatus); 
     }
     
     function handleTaskDrop(event, targetTask) {
         event.preventDefault();
         event.stopPropagation();
-        const draggedId = parseInt(event.dataTransfer.getData('text/plain'));
+        
+        // FIX: Removed parseInt()
+        const draggedId = event.dataTransfer.getData('text/plain');
+        
         if (!draggedId || draggedId === targetTask.id) return;
+        
         const targetIndex = $tasks.findIndex(t => t.id === targetTask.id);
         moveTask(draggedId, targetTask.status, targetIndex);
     }
