@@ -2,10 +2,22 @@
     import { page } from '$app/stores';
     import { Timer, ListTodo, BarChart3, Hexagon, User } from 'lucide-svelte';
     import Toast from '$lib/components/Toast.svelte'; 
-    import SettingsModal from '$lib/components/SettingsModal.svelte'; // <--- 1. IMPORT MODAL
+    import SettingsModal from '$lib/components/SettingsModal.svelte'; 
+    
+    // --- NEW IMPORTS FOR CLOUD SYNC ---
+    import { onMount } from 'svelte';
+    import { user } from '$lib/stores/auth';
+    import { loadTasks } from '$lib/stores/tasks';
+    // ----------------------------------
 
-    // State to control the Settings/Profile popup
     let showSettings = false;
+
+    // --- NEW REACTIVE LOGIC ---
+    // When the user logs in, immediately pull their tasks from the cloud.
+    $: if ($user) {
+        loadTasks();
+    }
+    // --------------------------
 </script>
 
 <Toast />
@@ -33,14 +45,21 @@
             <a href="/stats" class:active={$page.url.pathname === '/stats'}>
                 <BarChart3 size={18} /> Stats
             </a>
-            </div>
+        </div>
 
         <div class="nav-right">
             <button class="profile-btn" on:click={() => showSettings = true}>
-                <span class="user-name">Focus User</span>
-                <div class="avatar-circle">
-                    <User size={18} />
-                </div>
+                {#if $user && $user.email}
+                    <span class="user-name">{$user.email.split('@')[0]}</span>
+                    <div class="avatar-circle">
+                        {$user.email[0].toUpperCase()}
+                    </div>
+                {:else}
+                    <span class="user-name">Focus User</span>
+                    <div class="avatar-circle">
+                        <User size={18} />
+                    </div>
+                {/if}
             </button>
         </div>
     </nav>
@@ -51,6 +70,7 @@
 </div>
 
 <style>
+    /* PRESERVED EXACTLY AS PROVIDED */
     :global(body) {
         margin: 0;
         font-family: 'Poppins', sans-serif;
@@ -71,12 +91,10 @@
         position: relative;
     }
 
-    /* LEFT SECTION */
     .nav-left { display: flex; align-items: center; gap: 12px; z-index: 10; }
     .logo-icon { display: flex; align-items: center; justify-content: center; }
     .brand-name { font-weight: 700; font-size: 1.5rem; letter-spacing: -0.5px; }
 
-    /* CENTER SECTION */
     .nav-center {
         position: absolute;
         left: 50%;
@@ -112,14 +130,13 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
-    /* RIGHT SECTION (Updated for Profile Button) */
     .nav-right { z-index: 10; }
 
     .profile-btn {
         background: rgba(0,0,0,0.1);
         border: 1px solid rgba(255,255,255,0.2);
         color: white;
-        padding: 6px 6px 6px 16px; /* Less padding right for the circle */
+        padding: 6px 6px 6px 16px; 
         border-radius: 30px;
         cursor: pointer;
         font-family: 'Poppins', sans-serif;
@@ -142,6 +159,7 @@
         background: white; color: #ba4949;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
+        font-weight: 700; /* Added so the initial letter looks bold */
     }
 
     main {
