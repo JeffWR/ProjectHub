@@ -24,8 +24,9 @@
     }
 
     function handleDrop(event, newStatus) {
-        event.preventDefault(); 
-        const id = parseInt(event.dataTransfer.getData('text/plain'));
+        event.preventDefault();
+        const id = event.dataTransfer.getData('text/plain');
+        console.log('🟢 Dropped task ID:', id, 'New status:', newStatus);
         if (id) moveTask(id, newStatus);
     }
     
