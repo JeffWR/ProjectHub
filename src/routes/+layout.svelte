@@ -1,9 +1,10 @@
 <script>
     import { page } from '$app/stores';
     import { Timer, ListTodo, BarChart3, Hexagon, User } from 'lucide-svelte';
-    import Toast from '$lib/components/Toast.svelte'; 
-    import SettingsModal from '$lib/components/SettingsModal.svelte'; 
-    
+    import Toast from '$lib/components/Toast.svelte';
+    import SettingsModal from '$lib/components/SettingsModal.svelte';
+    import SyncStatus from '$lib/components/SyncStatus.svelte';
+
     // --- NEW IMPORTS FOR CLOUD SYNC ---
     import { onMount } from 'svelte';
     import { user } from '$lib/stores/auth';
@@ -45,6 +46,10 @@
             <a href="/stats" class:active={$page.url.pathname === '/stats'}>
                 <BarChart3 size={18} /> Stats
             </a>
+        </div>
+
+        <div class="nav-sync">
+            <SyncStatus />
         </div>
 
         <div class="nav-right">
@@ -128,6 +133,12 @@
         color: #ba4949;
         font-weight: 600;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .nav-sync {
+        position: absolute;
+        right: 180px;
+        z-index: 10;
     }
 
     .nav-right { z-index: 10; }
