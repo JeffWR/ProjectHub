@@ -2,37 +2,68 @@
     import { createEventDispatcher } from 'svelte';
     import { fade, scale } from 'svelte/transition';
     import { X, User, LogOut, Loader2, Mail } from 'lucide-svelte';
-    import { supabase } from '$lib/supabase'; 
-    import { user } from '$lib/stores/auth'; 
+    import { supabase } from '$lib/supabase';
+    import { user } from '$lib/stores/auth';
+    import { addToast } from '$lib/stores/toast';
 
     const dispatch = createEventDispatcher();
-    
+
     let loading = false;
     let email = "";
     let sentMagicLink = false;
 
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     // 1. HANDLE LOGIN (Magic Link)
     async function handleLogin() {
-        if (!email) return alert("Please enter an email");
-        loading = true;
-        
-        const { error } = await supabase.auth.signInWithOtp({ email });
-        
-        if (error) {
-            alert(error.message);
-        } else {
-            sentMagicLink = true;
+        if (!email) {
+            addToast("Please enter an email", "error");
+            return;
         }
-        loading = false;
+
+        if (!emailRegex.test(email)) {
+            addToast("Please enter a valid email address", "error");
+            return;
+        }
+
+        loading = true;
+
+        try {
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                    emailRedirectTo: window.location.origin
+                }
+            });
+
+            if (error) throw error;
+
+            sentMagicLink = true;
+            addToast("Magic link sent! Check your email", "success");
+        } catch (error) {
+            console.error('Login error:', error);
+            addToast(error.message || "Failed to send magic link", "error");
+        } finally {
+            loading = false;
+        }
     }
 
     // 2. HANDLE LOGOUT
     async function handleSignOut() {
         loading = true;
-        await supabase.auth.signOut();
-        // We don't need to manually clear the store; auth.js listens for this!
-        dispatch('close');
-        loading = false;
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+
+            addToast("Signed out successfully", "success");
+            dispatch('close');
+        } catch (error) {
+            console.error('Sign out error:', error);
+            addToast("Failed to sign out", "error");
+        } finally {
+            loading = false;
+        }
     }
 </script>
 
