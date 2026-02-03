@@ -395,28 +395,85 @@ export const deleteTask = async (id) => {
 };
 
 export const updateTaskProgress = async (id, secondsToAdd) => {
+    console.log('⏱️ updateTaskProgress called:', { id, secondsToAdd });
+
     let newTimeSpent = 0;
+    let taskFound = false;
 
     // 1. Local Update
     tasks.update(all => all.map(t => {
         if (t.id === id) {
-            newTimeSpent = t.timeSpent + (secondsToAdd / 60);
+            taskFound = true;
+            const oldTimeSpent = t.timeSpent;
+            newTimeSpent = oldTimeSpent + (secondsToAdd / 60);
+            console.log('⏱️ Updating local task:', {
+                taskId: id,
+                oldTimeSpent,
+                secondsToAdd,
+                newTimeSpent
+            });
             return { ...t, timeSpent: newTimeSpent };
         }
         return t;
     }));
 
-    // 2. Server Update (silent failure - time tracking is non-critical)
+    if (!taskFound) {
+        console.error('❌ Task not found for time update:', id);
+        return;
+    }
+
+    // 2. Server Update
     const currentUser = get(user);
+    console.log('👤 Current user:', currentUser ? currentUser.email : 'not logged in');
+
     if (currentUser) {
+        const online = get(isOnline);
+        console.log('🌐 Online status:', online);
+
+        if (!online) {
+            console.log('📝 Offline: queuing time update');
+            addToSyncQueue({
+                id: crypto.randomUUID(),
+                type: 'update',
+                taskId: id,
+                data: { time_spent: newTimeSpent }
+            });
+            return;
+        }
+
         try {
-            await supabase.from('tasks')
+            console.log('☁️ Attempting server update:', { taskId: id, time_spent: newTimeSpent });
+            const { data, error } = await supabase.from('tasks')
                 .update({ time_spent: newTimeSpent })
                 .eq('id', id);
+
+            if (error) {
+                console.error('❌ Supabase error:', error);
+                console.error('Error details:', { message: error.message, details: error.details, hint: error.hint });
+
+                // Queue for retry
+                addToSyncQueue({
+                    id: crypto.randomUUID(),
+                    type: 'update',
+                    taskId: id,
+                    data: { time_spent: newTimeSpent }
+                });
+                addToast('Failed to sync timer progress', 'error');
+                return;
+            }
+
+            console.log('✅ Time update synced successfully:', data);
             lastSyncTime.set(Date.now());
         } catch (error) {
-            // Silent failure for time tracking
-            console.error('Error updating time spent:', error);
+            console.error('❌ Exception during time sync:', error);
+
+            // Queue for retry
+            addToSyncQueue({
+                id: crypto.randomUUID(),
+                type: 'update',
+                taskId: id,
+                data: { time_spent: newTimeSpent }
+            });
         }
     }
 };

@@ -13,7 +13,7 @@ function createTimer() {
     let initialData = {
         timeLeft: defaultSettings.pomodoro * 60,
         isRunning: false,
-        mode: 'pomodoro', 
+        mode: 'pomodoro',
         settings: defaultSettings,
         lastTick: null // NEW: Tracks the exact time of the last update
     };
@@ -28,6 +28,30 @@ function createTimer() {
     const { subscribe, update } = store;
     let interval;
 
+    // --- BATCHING STRATEGY ---
+    // Accumulate time locally and sync to server every SYNC_INTERVAL seconds
+    const SYNC_INTERVAL = 10; // Sync every 10 seconds (industry standard)
+    let pendingSeconds = 0; // Accumulated seconds not yet synced
+    let lastSyncTick = 0; // Track ticks since last sync
+
+    // --- SYNC ACCUMULATED TIME ---
+    const syncAccumulatedTime = (forceSync = false) => {
+        if (pendingSeconds === 0) return; // Nothing to sync
+
+        const state = get(store);
+        if (state.mode !== 'pomodoro') return; // Only track pomodoro time
+
+        const currentTasks = get(tasks);
+        const topTask = currentTasks.find(t => t.status === 'inprogress');
+
+        if (topTask) {
+            console.log(`📊 Syncing ${pendingSeconds}s to server (${forceSync ? 'forced' : 'batched'})`);
+            updateTaskProgress(topTask.id, pendingSeconds);
+            pendingSeconds = 0; // Reset after sync
+            lastSyncTick = 0;
+        }
+    };
+
     // --- THE DELTA ENGINE ---
     const tick = () => {
         update(state => {
@@ -35,10 +59,10 @@ function createTimer() {
 
             const now = Date.now();
             const lastTick = state.lastTick || now; // Fallback if null
-            
+
             // Calculate how many seconds passed since the last frame (The Delta)
             const deltaMs = now - lastTick;
-            
+
             // If less than 1 second passed, don't update yet (prevents micro-updates)
             if (deltaMs < 1000) return state;
 
@@ -51,26 +75,31 @@ function createTimer() {
             // Clamp: If we passed 0, we stop there.
             if (newTimeLeft <= 0) {
                 // Only credit the time it took to reach 0 (don't credit extra time)
-                timeWorked = state.timeLeft; 
+                timeWorked = state.timeLeft;
                 newTimeLeft = 0;
             }
 
-            // 2. UPDATE THE TASK (Synced exactly with the delta)
+            // 2. ACCUMULATE TIME LOCALLY (don't sync yet)
             if (state.mode === 'pomodoro' && timeWorked > 0) {
-                const currentTasks = get(tasks);
-                const topTask = currentTasks.find(t => t.status === 'inprogress');
-                if (topTask) {
-                    updateTaskProgress(topTask.id, timeWorked);
+                pendingSeconds += timeWorked;
+                lastSyncTick += deltaSeconds;
+
+                // Batch sync every SYNC_INTERVAL seconds
+                if (lastSyncTick >= SYNC_INTERVAL) {
+                    syncAccumulatedTime(false);
                 }
             }
 
             // 3. STOP IF FINISHED
             if (newTimeLeft === 0) {
+                // Sync any remaining time before stopping
+                syncAccumulatedTime(true);
+
                 // Stop the loop
                 if (interval) clearInterval(interval);
-                return { 
-                    ...state, 
-                    isRunning: false, 
+                return {
+                    ...state,
+                    isRunning: false,
                     timeLeft: 0,
                     lastTick: null
                 };
@@ -78,10 +107,10 @@ function createTimer() {
 
             // 4. SAVE STATE (Update lastTick to NOW, minus the remainder ms)
             // We subtract the remainder to keep the seconds smooth next time
-            return { 
-                ...state, 
+            return {
+                ...state,
                 timeLeft: newTimeLeft,
-                lastTick: now - (deltaMs % 1000) 
+                lastTick: now - (deltaMs % 1000)
             };
         });
     };
@@ -112,6 +141,9 @@ function createTimer() {
     };
 
     const pause = () => {
+        // Sync any pending time before pausing
+        syncAccumulatedTime(true);
+
         update(s => ({ ...s, isRunning: false, lastTick: null }));
         if (interval) clearInterval(interval);
     };
@@ -147,12 +179,19 @@ function createTimer() {
     // If the user leaves the tab and comes back, force an immediate update
     if (browser) {
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                const state = get(store);
-                if (state.isRunning) {
-                    tick(); // Run the math immediately
-                }
+            const state = get(store);
+            if (document.visibilityState === 'hidden' && state.isRunning) {
+                // Sync before tab becomes hidden
+                syncAccumulatedTime(true);
+            } else if (document.visibilityState === 'visible' && state.isRunning) {
+                // Run the math immediately when returning
+                tick();
             }
+        });
+
+        // Sync before page unload (close, refresh, navigate away)
+        window.addEventListener('beforeunload', () => {
+            syncAccumulatedTime(true);
         });
 
         // Save to LocalStorage on every change
