@@ -30,10 +30,15 @@
         loading = true;
 
         try {
+            // Use production URL for redirect, fallback to current origin for local dev
+            const redirectUrl = import.meta.env.PROD
+                ? 'https://project-hubs.com'
+                : window.location.origin;
+
             const { error } = await supabase.auth.signInWithOtp({
                 email,
                 options: {
-                    emailRedirectTo: window.location.origin
+                    emailRedirectTo: redirectUrl
                 }
             });
 
