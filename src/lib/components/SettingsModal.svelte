@@ -1,7 +1,7 @@
 <script>
     import { createEventDispatcher } from 'svelte';
     import { fade, scale } from 'svelte/transition';
-    import { X, User, LogOut, Loader2, Mail } from 'lucide-svelte';
+    import { X, User, LogOut, Loader2, Mail, Lock } from 'lucide-svelte';
     import { supabase } from '$lib/supabase';
     import { user } from '$lib/stores/auth';
     import { addToast } from '$lib/stores/toast';
@@ -10,15 +10,63 @@
 
     let loading = false;
     let email = "";
-    let sentMagicLink = false;
+    let password = "";
+    let isSignUp = false; // Toggle between login and signup
+    let showEmailVerification = false;
 
     // Email validation regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // 1. HANDLE LOGIN (Magic Link)
+    // 1. HANDLE SIGN UP (Email + Password)
+    async function handleSignUp() {
+        if (!email || !password) {
+            addToast("Please enter email and password", "error");
+            return;
+        }
+
+        if (!emailRegex.test(email)) {
+            addToast("Please enter a valid email address", "error");
+            return;
+        }
+
+        if (password.length < 6) {
+            addToast("Password must be at least 6 characters", "error");
+            return;
+        }
+
+        loading = true;
+
+        try {
+            const redirectUrl = import.meta.env.PROD
+                ? 'https://project-hubs.com'
+                : window.location.origin;
+
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    emailRedirectTo: redirectUrl
+                }
+            });
+
+            if (error) throw error;
+
+            if (data?.user) {
+                showEmailVerification = true;
+                addToast("Account created! Please check your email to verify.", "success");
+            }
+        } catch (error) {
+            console.error('Sign up error:', error);
+            addToast(error.message || "Failed to create account", "error");
+        } finally {
+            loading = false;
+        }
+    }
+
+    // 2. HANDLE LOGIN (Email + Password)
     async function handleLogin() {
-        if (!email) {
-            addToast("Please enter an email", "error");
+        if (!email || !password) {
+            addToast("Please enter email and password", "error");
             return;
         }
 
@@ -30,25 +78,20 @@
         loading = true;
 
         try {
-            // Use production URL for redirect, fallback to current origin for local dev
-            const redirectUrl = import.meta.env.PROD
-                ? 'https://project-hubs.com'
-                : window.location.origin;
-
-            const { error } = await supabase.auth.signInWithOtp({
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email,
-                options: {
-                    emailRedirectTo: redirectUrl
-                }
+                password
             });
 
             if (error) throw error;
 
-            sentMagicLink = true;
-            addToast("Magic link sent! Check your email", "success");
+            if (data?.user) {
+                addToast("Logged in successfully!", "success");
+                dispatch('close');
+            }
         } catch (error) {
             console.error('Login error:', error);
-            addToast(error.message || "Failed to send magic link", "error");
+            addToast(error.message || "Failed to log in", "error");
         } finally {
             loading = false;
         }
@@ -114,26 +157,56 @@
                 <div class="login-icon">
                     <User size={48} strokeWidth={1.5} />
                 </div>
-                <h3>Sign in to Sync</h3>
+                <h3>{isSignUp ? 'Create Account' : 'Sign In'}</h3>
                 <p>Save your tasks and stats across all your devices.</p>
 
-                {#if sentMagicLink}
+                {#if showEmailVerification}
                     <div class="magic-sent">
                         <Mail size={32} />
-                        <p>Check your email! We sent you a magic link to log in.</p>
+                        <p>Check your email! Click the verification link to activate your account.</p>
+                        <button class="btn-text" on:click={() => showEmailVerification = false}>
+                            Back to login
+                        </button>
                     </div>
                 {:else}
                     <div class="input-group">
-                        <input type="email" placeholder="name@example.com" bind:value={email} />
+                        <input
+                            type="email"
+                            placeholder="Email address"
+                            bind:value={email}
+                            on:keydown={(e) => e.key === 'Enter' && (isSignUp ? handleSignUp() : handleLogin())}
+                        />
                     </div>
-                    
-                    <button class="btn-primary" on:click={handleLogin} disabled={loading}>
+
+                    <div class="input-group">
+                        <input
+                            type="password"
+                            placeholder="Password (min 6 characters)"
+                            bind:value={password}
+                            on:keydown={(e) => e.key === 'Enter' && (isSignUp ? handleSignUp() : handleLogin())}
+                        />
+                    </div>
+
+                    <button
+                        class="btn-primary"
+                        on:click={isSignUp ? handleSignUp : handleLogin}
+                        disabled={loading}
+                    >
                         {#if loading}
                             <Loader2 size={18} class="spin"/>
                         {:else}
-                            Send Magic Link
+                            {isSignUp ? 'Create Account' : 'Sign In'}
                         {/if}
                     </button>
+
+                    <div class="toggle-auth">
+                        <span>
+                            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                        </span>
+                        <button class="btn-text" on:click={() => isSignUp = !isSignUp}>
+                            {isSignUp ? 'Sign in' : 'Sign up'}
+                        </button>
+                    </div>
                 {/if}
             </div>
         {/if}
@@ -189,4 +262,9 @@
     .btn-signout:hover { text-decoration: underline; }
 
     .magic-sent { background: rgba(76, 175, 80, 0.1); color: #81c784; padding: 20px; border-radius: 12px; border: 1px solid rgba(76, 175, 80, 0.3); display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; }
+
+    /* AUTH TOGGLE */
+    .toggle-auth { display: flex; gap: 5px; justify-content: center; align-items: center; font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-top: 5px; }
+    .btn-text { background: transparent; border: none; color: #ba4949; font-weight: 600; cursor: pointer; padding: 0; font-size: inherit; text-decoration: underline; }
+    .btn-text:hover { color: #d65959; }
 </style>
