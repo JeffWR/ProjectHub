@@ -1,0 +1,169 @@
+/* ============================================
+   UNIFIED STATS COMPONENT DESIGN SYSTEM
+   ============================================ */
+
+/* --- CONTAINERS --- */
+.stat-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+/* --- TYPOGRAPHY --- */
+.stat-box h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Headers */
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* Labels */
+.stat-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Values/Numbers */
+.stat-value {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Meta text (secondary info) */
+.stat-meta {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- BADGES --- */
+.stat-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.stat-badge.red {
+    color: #ff7675;
+    background: rgba(255, 118, 117, 0.15);
+}
+
+.stat-badge.green {
+    color: #4caf50;
+    background: rgba(76, 175, 80, 0.15);
+}
+
+.stat-badge.blue {
+    color: #0984e3;
+    background: rgba(9, 132, 227, 0.15);
+}
+
+.stat-badge.orange {
+    color: #ff9800;
+    background: rgba(255, 152, 0, 0.15);
+}
+
+/* --- CHARTS --- */
+.chart-labels-top {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px;
+    margin-bottom: 8px;
+}
+
+.chart-labels-top span {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- DIVIDERS --- */
+.stat-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 12px 0;
+}
+
+/* --- LISTS --- */
+.stat-list-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-list-row:last-child {
+    border-bottom: none;
+}
+
+/* --- BUTTONS --- */
+.stat-button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.stat-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 1);
+}
+
+/* --- SPACING UTILITIES --- */
+.stat-gap-sm { gap: 4px; }
+.stat-gap-md { gap: 8px; }
+.stat-gap-lg { gap: 12px; }
+
+.stat-mb-sm { margin-bottom: 4px; }
+.stat-mb-md { margin-bottom: 8px; }
+.stat-mb-lg { margin-bottom: 12px; }
+
+.stat-mt-sm { margin-top: 4px; }
+.stat-mt-md { margin-top: 8px; }
+.stat-mt-lg { margin-top: 12px; }
+
+/* --- EMPTY STATES --- */
+.stat-empty {
+    color: rgba(255, 255, 255, 0.3);
+    font-style: italic;
+    text-align: center;
+    padding: 24px;
+    font-size: 0.85rem;
+}
+
+/* --- ACTIVE/HOVER STATES --- */
+.stat-active {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.stat-inactive {
+    opacity: 0.5;
+}
