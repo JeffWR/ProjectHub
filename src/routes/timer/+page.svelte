@@ -4,8 +4,8 @@
     import { settings } from '$lib/stores/settings';
     import { history } from '$lib/stores/history';
     import { fly } from 'svelte/transition';
-    
-    import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js'; 
+
+    import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js';
     import { handleTimerCompletion, advancePhase, applyMode } from '$lib/components/timer/TimerLogic';
 
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';

@@ -2,7 +2,7 @@
     import { tasks } from '$lib/stores/tasks';
     import { history } from '$lib/stores/history';
     import { ArrowLeft } from 'lucide-svelte';
-    
+
     // Components
     import FocusWidget from '$lib/components/stats/FocusWidget.svelte';
     import TaskWidget from '$lib/components/stats/TaskWidget.svelte';

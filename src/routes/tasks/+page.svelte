@@ -2,11 +2,11 @@
     import { tasks, addTask, moveTask } from '$lib/stores/tasks';
     import TaskItem from '$lib/components/TaskItem.svelte';
     import TaskModal from '$lib/components/TaskModal.svelte';
-    import TaskDetailModal from '$lib/components/TaskDetailModal.svelte'; // <--- NEW IMPORT
+    import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
     import { Plus, LayoutList } from 'lucide-svelte';
 
     let showModal = false;
-    let selectedTask = null; // <--- NEW STATE
+    let selectedTask = null;
 
     $: todoTasks = $tasks.filter(t => t.status === 'todo');
     $: progressTasks = $tasks.filter(t => t.status === 'inprogress');
