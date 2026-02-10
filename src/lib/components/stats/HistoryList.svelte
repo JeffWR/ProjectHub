@@ -8,8 +8,10 @@
 
     async function toggleExpand() {
         if (isExpanded) {
+            // Instantly jump to top
+            if (listContainer) listContainer.scrollTop = 0;
+
             isClosing = true;
-            setTimeout(() => { if (listContainer) listContainer.scrollTo({ top: 0, behavior: 'smooth' }); }, 5);
             setTimeout(() => { isExpanded = false; isClosing = false; }, 100);
         } else {
             isExpanded = true;
@@ -54,15 +56,15 @@
     .archive-box {
         display: flex;
         flex-direction: column;
+        flex: 1;
         min-height: 0;
-        max-height: 380px;
     }
 
     .list-container {
         display: flex;
         flex-direction: column;
         gap: 0;
-        max-height: 240px;
+        max-height: 280px;
         overflow: hidden;
         transition: max-height 0.2s ease-out;
         -webkit-mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
@@ -110,12 +112,14 @@
     }
 
     .expand-btn {
-        margin-top: 8px;
+        margin-top: auto;
+        margin-bottom: 0;
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 6px;
+        flex-shrink: 0;
     }
 
     .arrow-wrap {
