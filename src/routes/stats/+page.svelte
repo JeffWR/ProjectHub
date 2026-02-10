@@ -235,11 +235,19 @@
         gap: 15px; flex: 1; min-height: 0; padding-bottom: 20px; 
     }
     
-    .column { 
-        display: flex; flex-direction: column; gap: 15px; 
-        overflow-y: auto; padding-right: 5px; 
+    .column {
+        display: flex; flex-direction: column; gap: 15px;
+        padding-right: 5px;
+    }
+    .left-col {
+        overflow: hidden; /* No scrolling on left column */
+    }
+    .mid-col {
+        overflow-y: auto; /* Timeline needs scrolling */
         scrollbar-width: none;
     }
-    .column::-webkit-scrollbar { display: none; }
-    .right-col { height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
+    .mid-col::-webkit-scrollbar { display: none; }
+    .right-col {
+        height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+    }
 </style>
