@@ -192,7 +192,7 @@
     </div>
 
     <div class="dashboard-grid">
-        
+
         <div class="column left-col">
             <FocusWidget {weekData} todayFocus={stats.todayFocus} weekFocusHrs={stats.weekFocusHrs} />
             <TaskWidget {weekData} todayTasks={stats.todayTasks} activeTasks={stats.activeTasks} />
