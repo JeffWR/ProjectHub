@@ -12,19 +12,18 @@ export async function handleTimerCompletion(heroTask, completedTodayCount) {
     const currentMode = get(timer).mode;
     const currentSettings = get(settings);
 
-    timer.reset(); 
-
-    // 1. If Pomodoro finished, log it and request Modal
+    // 1. If Pomodoro finished, log it, reset, and request Modal
     if (currentMode === 'pomodoro') {
         logSession(
-            currentSettings?.pomodoro || 25, 
-            heroTask?.id, 
+            currentSettings?.pomodoro || 25,
+            heroTask?.id,
             heroTask?.title || 'Focus'
         );
+        timer.reset(); // Reset pomodoro timer for next session
         return { shouldShowModal: true };
-    } 
-    
-    // 2. If Break finished, automatically move to next phase
+    }
+
+    // 2. If Break finished, automatically move to next phase (which will set correct duration)
     await advancePhase(completedTodayCount);
     return { shouldShowModal: false };
 }
