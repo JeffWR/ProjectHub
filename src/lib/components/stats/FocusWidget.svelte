@@ -14,17 +14,18 @@
         {#each weekData as d}<span>{d.label}</span>{/each}
     </div>
 
-    <div class="graph-wrapper">
-        <div class="graph-row">
-            {#each weekData as d}
-                <div class="graph-col" class:stat-active={d.isToday} class:stat-inactive={!d.isToday}>
+    <div class="graph-row">
+        {#each weekData as d}
+            <div class="graph-col" class:stat-active={d.isToday} class:stat-inactive={!d.isToday}>
+                <div class="dots-container">
                     <div class="dots-stack">
                         {#each Array(Math.min(d.val, 6)) as _}<div class="dot"></div>{/each}
                         {#if d.val === 0}<div class="dot empty"></div>{/if}
                     </div>
+                    {#if d.val > 0}<span class="dot-val stat-value">{d.val}</span>{/if}
                 </div>
-            {/each}
-        </div>
+            </div>
+        {/each}
     </div>
 
     <div class="stat-divider"></div>
@@ -34,23 +35,13 @@
 <style>
     @import '$lib/styles/stats-unified.css';
 
-    .stat-box { height: 100%; display: flex; flex-direction: column; }
-
-    .graph-wrapper {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        min-height: 40px;
-        margin-bottom: 8px;
-    }
-
     .graph-row {
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
-        height: 100%;
+        height: 80px;
         padding: 0 8px;
+        margin-top: 8px;
     }
 
     .graph-col {
@@ -61,12 +52,20 @@
         transition: all 0.2s;
     }
 
+    .dots-container {
+        height: 60px;
+        display: flex;
+        align-items: flex-end;
+        position: relative;
+        width: 20px;
+        justify-content: center;
+    }
+
     .dots-stack {
         display: flex;
         flex-direction: column-reverse;
         gap: 3px;
-        min-height: 30px;
-        justify-content: flex-start;
+        min-height: 8px;
     }
 
     .dot {
@@ -78,5 +77,12 @@
 
     .dot.empty {
         background: rgba(255, 255, 255, 0.1);
+    }
+
+    .dot-val {
+        position: absolute;
+        top: -20px;
+        font-size: 0.75rem;
+        font-weight: 700;
     }
 </style>
