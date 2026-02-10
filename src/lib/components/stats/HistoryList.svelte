@@ -52,26 +52,29 @@
     @import '$lib/styles/stats-unified.css';
 
     .archive-box {
-        flex: 1;
         display: flex;
         flex-direction: column;
-        min-height: 320px;
+        min-height: 0;
+        max-height: 380px;
     }
 
     .list-container {
         display: flex;
         flex-direction: column;
         gap: 0;
-        max-height: 420px;
+        max-height: 240px;
         overflow: hidden;
         transition: max-height 0.2s ease-out;
         -webkit-mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
         mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
         margin-top: 8px;
+        flex: 1;
+        min-height: 0;
     }
 
     .list-container.scroll-mode {
         overflow-y: auto;
+        max-height: none;
         padding-bottom: 20px;
         scrollbar-width: none;
         -webkit-mask-position: 0 100%;

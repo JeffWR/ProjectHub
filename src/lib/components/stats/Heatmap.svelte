@@ -156,6 +156,14 @@
         position: relative;
         width: 12px;
         height: 12px;
+        pointer-events: none;
+    }
+
+    .legend-scale .heat-cell:hover {
+        transform: none;
+        border: none;
+        box-shadow: none;
+        z-index: auto;
     }
 
     .stats-summary {
