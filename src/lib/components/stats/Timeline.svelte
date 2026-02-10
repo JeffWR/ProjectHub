@@ -1,4 +1,5 @@
 <script>
+    import { onMount } from 'svelte';
     import { ChevronLeft, ChevronRight } from 'lucide-svelte';
     import { isSameDay } from '$lib/utils/statsUtils';
 
@@ -8,6 +9,30 @@
 
     const HOURS_IN_DAY = 24;
     const PIXELS_PER_HOUR = 80;
+
+    let timelineScroll;
+
+    onMount(() => {
+        if (timelineScroll && isSameDay(selectedDate, new Date())) {
+            // Center on current time
+            const now = new Date();
+            const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+            const currentPosition = (currentMinutes / 60) * PIXELS_PER_HOUR;
+            const containerHeight = timelineScroll.clientHeight;
+
+            // Scroll so current time is centered
+            timelineScroll.scrollTop = currentPosition - (containerHeight / 2);
+        }
+    });
+
+    // Also scroll to center when date changes to today
+    $: if (timelineScroll && isSameDay(selectedDate, new Date())) {
+        const now = new Date();
+        const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+        const currentPosition = (currentMinutes / 60) * PIXELS_PER_HOUR;
+        const containerHeight = timelineScroll.clientHeight;
+        timelineScroll.scrollTop = currentPosition - (containerHeight / 2);
+    }
 </script>
 
 <div class="stat-box timeline-box">
@@ -24,7 +49,7 @@
         </button>
     </div>
 
-    <div class="timeline-scroll">
+    <div class="timeline-scroll" bind:this={timelineScroll}>
         <div class="daily-grid" style="height: {HOURS_IN_DAY * PIXELS_PER_HOUR}px">
             {#each Array(HOURS_IN_DAY) as _, h}
                 <div class="grid-hour" style="top: {h * PIXELS_PER_HOUR}px; height: {PIXELS_PER_HOUR}px;">
