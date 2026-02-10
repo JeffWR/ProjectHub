@@ -54,12 +54,12 @@
         // 1. TIMELINE DATA
         const PIXELS_PER_HOUR = 80;
         timelineSessions = todaysSessions.map(session => {
-            const d = safeDate(session.date);
-            if (!d) return null;
-            const startMinutes = (d.getHours() * 60) + d.getMinutes();
+            const endD = safeDate(session.date);
+            if (!endD) return null;
             const duration = session.duration || 25;
-            const endD = new Date(d.getTime() + duration * 60000);
-            const timeRange = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')} - ${endD.getHours()}:${endD.getMinutes().toString().padStart(2,'0')}`;
+            const startD = new Date(endD.getTime() - duration * 60000);
+            const startMinutes = (startD.getHours() * 60) + startD.getMinutes();
+            const timeRange = `${startD.getHours()}:${startD.getMinutes().toString().padStart(2,'0')} - ${endD.getHours()}:${endD.getMinutes().toString().padStart(2,'0')}`;
 
             return {
                 ...session,
