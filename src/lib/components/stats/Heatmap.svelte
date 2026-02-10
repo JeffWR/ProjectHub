@@ -152,6 +152,12 @@
         gap: 3px;
     }
 
+    .legend-scale .heat-cell {
+        position: relative;
+        width: 12px;
+        height: 12px;
+    }
+
     .stats-summary {
         display: flex;
         justify-content: space-between;
