@@ -300,4 +300,60 @@
     .hero-spacer { margin-bottom: 30px; position: relative; }
     .hero-spacer::after { content: 'Up Next'; position: absolute; bottom: -25px; left: 0; width: 100%; text-align: center; font-size: 0.7rem; color: rgba(255,255,255,0.2); letter-spacing: 2px; text-transform: uppercase; }
     .hero-spacer:last-child::after { display: none; }
+
+    /* === TRELLO-STYLE DRAG & DROP === */
+
+    /* Task being dragged - make it invisible/ghost-like */
+    .being-dragged {
+        opacity: 0.4;
+        transform: scale(0.95);
+        transition: opacity 0.2s, transform 0.2s;
+        pointer-events: none;
+    }
+
+    /* Alternative: completely hide the dragged task */
+    .dragging {
+        opacity: 0;
+        height: 0;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+
+    /* Placeholder showing where task will land */
+    .drop-placeholder {
+        height: 80px;
+        background: rgba(255, 118, 117, 0.15);
+        border: 2px dashed rgba(255, 118, 117, 0.5);
+        border-radius: 12px;
+        margin: 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 118, 117, 0.8);
+        font-size: 0.9rem;
+        font-weight: 600;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            background: rgba(255, 118, 117, 0.15);
+            border-color: rgba(255, 118, 117, 0.5);
+        }
+        50% {
+            background: rgba(255, 118, 117, 0.25);
+            border-color: rgba(255, 118, 117, 0.7);
+        }
+    }
+
+    /* Make drag cursor visible */
+    [draggable="true"] {
+        cursor: grab;
+    }
+
+    [draggable="true"]:active {
+        cursor: grabbing;
+    }
 </style>

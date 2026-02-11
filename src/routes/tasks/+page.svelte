@@ -220,4 +220,46 @@
         display: flex; align-items: center; gap: 15px; width: 100%; height: 100%;
         text-decoration: none; color: white; padding: 0 25px; box-sizing: border-box;
     }
+
+    /* --- TRELLO-STYLE DRAG & DROP EFFECTS --- */
+    .being-dragged {
+        opacity: 0.4;
+        transform: scale(0.95);
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .drop-placeholder {
+        /* height set dynamically via inline style to match dragged task */
+        min-height: 60px;
+        background: rgba(255, 118, 117, 0.15);
+        border: 2px dashed rgba(255, 118, 117, 0.5);
+        border-radius: 12px;
+        margin: 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 118, 117, 0.8);
+        font-size: 0.9rem;
+        font-weight: 600;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            background: rgba(255, 118, 117, 0.15);
+            border-color: rgba(255, 118, 117, 0.5);
+        }
+        50% {
+            background: rgba(255, 118, 117, 0.25);
+            border-color: rgba(255, 118, 117, 0.7);
+        }
+    }
+
+    [draggable="true"] {
+        cursor: grab;
+    }
+
+    [draggable="true"]:active {
+        cursor: grabbing;
+    }
 </style>
