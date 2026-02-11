@@ -96,12 +96,13 @@ const createTaskModel = (data) => {
         id: crypto.randomUUID(), // Update: Use UUIDs to match Supabase format
         title: data.title,
         description: data.description || '',
-        status: 'todo',             
+        status: 'todo',
         priority: data.priority || 'Medium',
         estTime: totalMinutes > 0 ? totalMinutes : 25,
         timeSpent: 0,
         createdAt: new Date().toISOString(),
-        completedAt: null
+        completedAt: null,
+        position: 0
     };
 };
 
