@@ -64,7 +64,7 @@
         display: flex;
         flex-direction: column;
         gap: 0;
-        max-height: 280px;
+        max-height: 300px;
         overflow: hidden;
         transition: max-height 0.2s ease-out;
         -webkit-mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
