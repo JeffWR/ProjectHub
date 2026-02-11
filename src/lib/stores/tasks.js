@@ -137,7 +137,7 @@ export const loadTasks = async () => {
         const { data, error } = await supabase
             .from('tasks')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('position', { ascending: true }); // Sort by position
 
         if (error) throw error;
 
