@@ -152,8 +152,10 @@ export const loadTasks = async () => {
                 estTime: t.est_time,
                 timeSpent: t.time_spent,
                 createdAt: t.created_at,
-                completedAt: t.completed_at
+                completedAt: t.completed_at,
+                position: t.position ?? 0 // Include position
             }));
+
             tasks.set(mappedTasks);
             syncStatus.set('idle');
             lastSyncTime.set(Date.now());
