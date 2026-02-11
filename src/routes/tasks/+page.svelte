@@ -38,27 +38,34 @@
         const dragElement = event.currentTarget;
         draggedTaskHeight = dragElement.offsetHeight;
 
-        // Create a tilted drag preview
+        // Create a wrapper with extra space for the tilted element
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '-9999px';
+        wrapper.style.left = '-9999px';
+        wrapper.style.padding = '30px'; // Extra space for rotation overhang
+        wrapper.style.overflow = 'visible';
+        wrapper.style.pointerEvents = 'none';
+
+        // Create the tilted clone
         const clone = dragElement.cloneNode(true);
         clone.style.transform = 'rotate(5deg)';
         clone.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.3)';
-        clone.style.position = 'absolute';
-        clone.style.top = '-9999px'; // Position off-screen
-        clone.style.left = '-9999px';
         clone.style.width = dragElement.offsetWidth + 'px';
-        clone.style.pointerEvents = 'none';
         clone.style.opacity = '0.9';
-        document.body.appendChild(clone);
 
-        // Set the tilted clone as the drag image
-        const offsetX = dragElement.offsetWidth / 2;
-        const offsetY = dragElement.offsetHeight / 2;
-        event.dataTransfer.setDragImage(clone, offsetX, offsetY);
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
 
-        // Clean up the clone after a short delay
+        // Set the wrapper as the drag image (offset includes padding)
+        const offsetX = dragElement.offsetWidth / 2 + 30;
+        const offsetY = dragElement.offsetHeight / 2 + 30;
+        event.dataTransfer.setDragImage(wrapper, offsetX, offsetY);
+
+        // Clean up after drag starts
         setTimeout(() => {
-            if (document.body.contains(clone)) {
-                document.body.removeChild(clone);
+            if (document.body.contains(wrapper)) {
+                document.body.removeChild(wrapper);
             }
         }, 0);
 
