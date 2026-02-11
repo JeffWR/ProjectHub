@@ -3,23 +3,65 @@
     import TaskItem from '$lib/components/TaskItem.svelte';
     import { Plus } from 'lucide-svelte';
 
-    export let onEdit;   
-    export let onCreate; 
+    export let onEdit;
+    export let onCreate;
 
     $: todoTasks = $tasks.filter(t => t.status === 'todo');
     $: progressTasks = $tasks.filter(t => t.status === 'inprogress');
     $: reviewTasks = $tasks.filter(t => t.status === 'review');
 
+    // Trello-style drag state
+    let draggedTaskId = null;
+    let dropTargetInfo = null; // { taskId, insertBefore: boolean }
+
     function handleDragStart(event, id) {
-        // ID is now a string (UUID), so we just pass it as text
+        console.log('🚀 Drag start:', id);
         event.dataTransfer.setData('text/plain', id);
         event.dataTransfer.effectAllowed = 'move';
+        draggedTaskId = id;
+    }
+
+    function handleDragEnd(event) {
+        draggedTaskId = null;
+        dropTargetInfo = null;
+    }
+
+    function handleDragOver(event, task) {
+        event.preventDefault();
+        event.stopPropagation(); // Prevent zone's dragover from interfering
+
+        if (!draggedTaskId || draggedTaskId === task.id) {
+            dropTargetInfo = null;
+            return;
+        }
+
+        // Calculate if cursor is in top half or bottom half of the task
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseY = event.clientY;
+        const taskMiddle = rect.top + (rect.height / 2);
+        const insertBefore = mouseY < taskMiddle;
+
+        // Update drop target info
+        dropTargetInfo = {
+            taskId: task.id,
+            insertBefore: insertBefore
+        };
+
+        console.log('🔍 Drag over:', {
+            task: task.title,
+            insertBefore,
+            mouseY,
+            taskMiddle
+        });
     }
 
     function handleZoneDrop(event, newStatus) {
-        // FIX: Removed parseInt()
+        event.preventDefault();
         const id = event.dataTransfer.getData('text/plain');
-        if (id) moveTask(id, newStatus); 
+        if (id) {
+            console.log('🎯 Zone drop:', { id, newStatus });
+            moveTask(id, newStatus);
+        }
     }
     
     function handleTaskDrop(event, targetTask) {
@@ -28,28 +70,53 @@
 
         const draggedId = event.dataTransfer.getData('text/plain');
 
-        console.log('🎯 Task dropped:', { draggedId, targetTask: targetTask.title });
-
-        if (!draggedId || draggedId === targetTask.id) return;
+        if (!draggedId || draggedId === targetTask.id || !dropTargetInfo) {
+            dropTargetInfo = null;
+            return;
+        }
 
         // Find the dragged task
         const draggedTask = $tasks.find(t => t.id === draggedId);
         if (!draggedTask) {
             console.error('❌ Dragged task not found');
+            dropTargetInfo = null;
             return;
         }
 
-        // Find target's position in global array
+        // Calculate the correct insertion index
         const targetIndex = $tasks.findIndex(t => t.id === targetTask.id);
+        const draggedIndex = $tasks.findIndex(t => t.id === draggedId);
+
+        let insertIndex;
+
+        if (dropTargetInfo.insertBefore) {
+            // Insert BEFORE the target task
+            insertIndex = targetIndex;
+            // If dragging from above to below, adjust index
+            if (draggedIndex < targetIndex) {
+                insertIndex--;
+            }
+        } else {
+            // Insert AFTER the target task
+            insertIndex = targetIndex + 1;
+            // If dragging from above to below, adjust index
+            if (draggedIndex < targetIndex) {
+                insertIndex--;
+            }
+        }
 
         console.log('📍 Moving task:', {
             from: draggedTask.title,
             to: targetTask.title,
+            draggedIndex,
             targetIndex,
+            insertBefore: dropTargetInfo.insertBefore,
+            finalInsertIndex: insertIndex,
             newStatus: targetTask.status
         });
 
-        moveTask(draggedId, targetTask.status, targetIndex);
+        moveTask(draggedId, targetTask.status, insertIndex);
+        dropTargetInfo = null;
     }
 </script>
 
@@ -62,13 +129,27 @@
         <div class="list-header">To Do <span class="count">{todoTasks.length}</span></div>
         <div class="drop-zone" on:drop={(e) => handleZoneDrop(e, 'todo')} on:dragover|preventDefault>
             {#each todoTasks as task (task.id)}
-                <div role="listitem" draggable="true" 
-                     on:dragstart={(e) => handleDragStart(e, task.id)} 
-                     on:drop={(e) => handleTaskDrop(e, task)} 
-                     on:dragover|preventDefault
+                <!-- Show placeholder BEFORE task if cursor is in top half -->
+                {#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
+                    <div class="drop-placeholder">Drop here</div>
+                {/if}
+
+                <!-- The task itself -->
+                <div role="listitem"
+                     draggable="true"
+                     class:being-dragged={draggedTaskId === task.id}
+                     on:dragstart={(e) => handleDragStart(e, task.id)}
+                     on:dragend={handleDragEnd}
+                     on:dragover={(e) => handleDragOver(e, task)}
+                     on:drop={(e) => handleTaskDrop(e, task)}
                      on:dblclick={() => onEdit(task)}>
                     <TaskItem {task} />
                 </div>
+
+                <!-- Show placeholder AFTER task if cursor is in bottom half -->
+                {#if dropTargetInfo?.taskId === task.id && !dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
+                    <div class="drop-placeholder">Drop here</div>
+                {/if}
             {/each}
         </div>
     </div>
@@ -77,14 +158,28 @@
         <div class="list-header focus-header">In Focus 🔥</div>
         <div class="drop-zone focus-zone" on:drop={(e) => handleZoneDrop(e, 'inprogress')} on:dragover|preventDefault>
             {#each progressTasks as task, index (task.id)}
-                <div role="listitem" draggable="true" 
-                     on:dragstart={(e) => handleDragStart(e, task.id)} 
-                     on:drop={(e) => handleTaskDrop(e, task)} 
-                     on:dragover|preventDefault
-                     on:dblclick={() => onEdit(task)}
-                     class:hero-spacer={index === 0}>
+                <!-- Show placeholder BEFORE task if cursor is in top half -->
+                {#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
+                    <div class="drop-placeholder">Drop here</div>
+                {/if}
+
+                <!-- The task itself -->
+                <div role="listitem"
+                     draggable="true"
+                     class:being-dragged={draggedTaskId === task.id}
+                     class:hero-spacer={index === 0}
+                     on:dragstart={(e) => handleDragStart(e, task.id)}
+                     on:dragend={handleDragEnd}
+                     on:dragover={(e) => handleDragOver(e, task)}
+                     on:drop={(e) => handleTaskDrop(e, task)}
+                     on:dblclick={() => onEdit(task)}>
                     <TaskItem {task} isHero={index === 0} showProgress={true} />
                 </div>
+
+                <!-- Show placeholder AFTER task if cursor is in bottom half -->
+                {#if dropTargetInfo?.taskId === task.id && !dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
+                    <div class="drop-placeholder">Drop here</div>
+                {/if}
             {/each}
             {#if progressTasks.length === 0}
                 <div class="empty-state">Drag task here to start timer</div>
@@ -96,13 +191,28 @@
         <div class="list-header">Completed <span class="count">{reviewTasks.length}</span></div>
         <div class="drop-zone" on:drop={(e) => handleZoneDrop(e, 'review')} on:dragover|preventDefault>
             {#each reviewTasks as task (task.id)}
-                <div role="listitem" draggable="true" 
-                     on:dragstart={(e) => handleDragStart(e, task.id)} 
-                     on:drop={(e) => handleTaskDrop(e, task)} 
-                     on:dragover|preventDefault
-                     class="dimmed">
+                <!-- Show placeholder BEFORE task if cursor is in top half -->
+                {#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
+                    <div class="drop-placeholder">Drop here</div>
+                {/if}
+
+                <!-- The task itself -->
+                <div role="listitem"
+                     draggable="true"
+                     class:being-dragged={draggedTaskId === task.id}
+                     class="dimmed"
+                     on:dragstart={(e) => handleDragStart(e, task.id)}
+                     on:dragend={handleDragEnd}
+                     on:dragover={(e) => handleDragOver(e, task)}
+                     on:drop={(e) => handleTaskDrop(e, task)}
+                     on:dblclick={() => onEdit(task)}>
                     <TaskItem {task} />
                 </div>
+
+                <!-- Show placeholder AFTER task if cursor is in bottom half -->
+                {#if dropTargetInfo?.taskId === task.id && !dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
+                    <div class="drop-placeholder">Drop here</div>
+                {/if}
             {/each}
         </div>
     </div>
