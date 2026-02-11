@@ -174,8 +174,17 @@ export const addTask = async (formData) => {
     const newTask = createTaskModel(formData);
     const currentUser = get(user);
 
-    // Update Store Immediately
-    tasks.update(all => [newTask, ...all]);
+    // Update Store Immediately - add at top (position 0)
+    tasks.update(all => {
+        // Increment all existing task positions
+        const incrementedTasks = all.map(t => ({
+            ...t,
+            position: (t.position ?? 0) + 1
+        }));
+
+        // Add new task at position 0
+        return [{ ...newTask, position: 0 }, ...incrementedTasks];
+    });
 
     // 2. Sync to Server
     if (currentUser) {
@@ -192,17 +201,39 @@ export const addTask = async (formData) => {
         }
 
         try {
-            const { error } = await supabase.from('tasks').insert({
+            // Get current tasks to update their positions
+            const currentTasks = get(tasks);
+
+            // Insert new task at position 0
+            const { error: insertError } = await supabase.from('tasks').insert({
                 id: newTask.id,
                 user_id: currentUser.id,
                 title: newTask.title,
                 description: newTask.description,
                 priority: newTask.priority,
                 est_time: newTask.estTime,
-                status: 'todo'
+                status: 'todo',
+                position: 0
             });
 
-            if (error) throw error;
+            if (insertError) throw insertError;
+
+            // Update positions for all other tasks using UPDATE instead of upsert
+            const otherTasks = currentTasks.filter(t => t.id !== newTask.id);
+            if (otherTasks.length > 0) {
+                const updatePromises = otherTasks.map(t =>
+                    supabase
+                        .from('tasks')
+                        .update({ position: t.position })
+                        .eq('id', t.id)
+                );
+
+                const results = await Promise.all(updatePromises);
+                const errors = results.filter(r => r.error);
+                if (errors.length > 0) {
+                    console.error('Error updating positions:', errors);
+                }
+            }
 
             addToast('Task created', 'success');
             lastSyncTime.set(Date.now());
