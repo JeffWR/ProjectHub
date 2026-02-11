@@ -25,13 +25,30 @@
     function handleTaskDrop(event, targetTask) {
         event.preventDefault();
         event.stopPropagation();
-        
-        // FIX: Removed parseInt()
+
         const draggedId = event.dataTransfer.getData('text/plain');
-        
+
+        console.log('🎯 Task dropped:', { draggedId, targetTask: targetTask.title });
+
         if (!draggedId || draggedId === targetTask.id) return;
-        
+
+        // Find the dragged task
+        const draggedTask = $tasks.find(t => t.id === draggedId);
+        if (!draggedTask) {
+            console.error('❌ Dragged task not found');
+            return;
+        }
+
+        // Find target's position in global array
         const targetIndex = $tasks.findIndex(t => t.id === targetTask.id);
+
+        console.log('📍 Moving task:', {
+            from: draggedTask.title,
+            to: targetTask.title,
+            targetIndex,
+            newStatus: targetTask.status
+        });
+
         moveTask(draggedId, targetTask.status, targetIndex);
     }
 </script>
