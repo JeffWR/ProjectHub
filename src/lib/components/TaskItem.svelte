@@ -33,7 +33,7 @@
             </div>
         {/if}
 
-        <button class="delete-btn" on:click|stopPropagation={() => deleteTask(task.id)} title="Delete permanently">
+        <button class="delete-btn" draggable="false" on:click|stopPropagation={() => deleteTask(task.id)} title="Delete permanently">
             <Trash2 size={16} />
         </button>
     </div>
@@ -70,7 +70,7 @@
     {/if}
 
     {#if isReview}
-        <button class="finish-btn" on:click|stopPropagation={() => moveTask(task.id, 'archived')}>
+        <button class="finish-btn" draggable="false" on:click|stopPropagation={() => moveTask(task.id, 'archived')}>
             <Archive size={16} />
             <span>Finish Task</span>
         </button>
