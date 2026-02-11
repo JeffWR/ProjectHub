@@ -1,7 +1,6 @@
 <script>
     import { tasks } from '$lib/stores/tasks';
     import { history } from '$lib/stores/history';
-    import { ArrowLeft } from 'lucide-svelte';
 
     // Components
     import FocusWidget from '$lib/components/stats/FocusWidget.svelte';
@@ -186,11 +185,6 @@
 </script>
 
 <div class="page-container">
-    <div class="header-nav">
-        <a href="/" class="back-link"><ArrowLeft size={18} /> Back</a>
-        <h2>Statistics</h2>
-    </div>
-
     <div class="dashboard-grid">
 
         <div class="column left-col">
@@ -221,14 +215,12 @@
 
 <style>
     .page-container {
-        height: calc(100vh - 120px);
+        height: calc(100vh - 100px);
         max-width: 1400px; margin: 0 auto;
         display: flex; flex-direction: column;
         color: #eee; overflow: hidden;
+        padding: 10px 0;
     }
-    .header-nav { flex-shrink: 0; display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding-left: 10px; }
-    .header-nav h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
-    .back-link { color: rgba(255,255,255,0.6); text-decoration: none; display: flex; align-items: center; gap: 5px; font-weight: 500; }
 
     .dashboard-grid {
         display: grid; grid-template-columns: 1.2fr 1.6fr 1.2fr;
