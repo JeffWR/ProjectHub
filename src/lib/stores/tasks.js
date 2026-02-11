@@ -297,11 +297,8 @@ export const updateTask = async (id, updates) => {
 };
 
 export const moveTask = async (taskId, newStatus, targetIndex = -1) => {
-    console.log('🔵 moveTask called:', { taskId, newStatus, targetIndex });
-
     // Store original state for potential rollback
     const originalTasks = get(tasks);
-    console.log('Original tasks count:', originalTasks.length);
 
     // 1. Complex Splicing Logic (PRESERVED)
     // This handles the visual drag-and-drop reordering locally
@@ -339,11 +336,9 @@ export const moveTask = async (taskId, newStatus, targetIndex = -1) => {
 
     // 2. Sync Status AND Positions to Server
     const currentUser = get(user);
-    console.log('Current user:', currentUser ? currentUser.email : 'not logged in');
 
     if (currentUser) {
         const online = get(isOnline);
-        console.log('Online status:', online);
 
         if (!online) {
             // Queue for offline sync
@@ -366,8 +361,6 @@ export const moveTask = async (taskId, newStatus, targetIndex = -1) => {
         }
 
         try {
-            console.log('Syncing positions for', updatedTasks.length, 'tasks');
-
             // Update each task individually to avoid RLS issues with upsert
             // Use Promise.all for parallel updates (faster than sequential)
             const updatePromises = updatedTasks.map(t =>
@@ -386,16 +379,14 @@ export const moveTask = async (taskId, newStatus, targetIndex = -1) => {
             // Check if any updates failed
             const errors = results.filter(r => r.error);
             if (errors.length > 0) {
-                console.error('Some updates failed:', errors);
+                console.error('Task sync failed:', errors[0].error.message);
                 throw errors[0].error;
             }
 
-            console.log('Task positions synced successfully');
             lastSyncTime.set(Date.now());
         } catch (error) {
-            console.error('Error syncing positions:', error);
-            console.error('Error message:', error.message);
-            addToast(`Failed to sync task move: ${error.message}`, 'error');
+            console.error('Task sync error:', error.message);
+            addToast('Failed to sync task. Changes saved locally.', 'error');
 
             // Rollback on error
             tasks.set(originalTasks);
@@ -465,8 +456,6 @@ export const deleteTask = async (id) => {
 };
 
 export const updateTaskProgress = async (id, secondsToAdd) => {
-    console.log('⏱️ updateTaskProgress called:', { id, secondsToAdd });
-
     let newTimeSpent = 0;
     let taskFound = false;
 
@@ -476,32 +465,23 @@ export const updateTaskProgress = async (id, secondsToAdd) => {
             taskFound = true;
             const oldTimeSpent = t.timeSpent;
             newTimeSpent = oldTimeSpent + (secondsToAdd / 60);
-            console.log('⏱️ Updating local task:', {
-                taskId: id,
-                oldTimeSpent,
-                secondsToAdd,
-                newTimeSpent
-            });
             return { ...t, timeSpent: newTimeSpent };
         }
         return t;
     }));
 
     if (!taskFound) {
-        console.error('❌ Task not found for time update:', id);
+        console.error('Timer update failed: Task not found');
         return;
     }
 
     // 2. Server Update
     const currentUser = get(user);
-    console.log('👤 Current user:', currentUser ? currentUser.email : 'not logged in');
 
     if (currentUser) {
         const online = get(isOnline);
-        console.log('🌐 Online status:', online);
 
         if (!online) {
-            console.log('📝 Offline: queuing time update');
             addToSyncQueue({
                 id: crypto.randomUUID(),
                 type: 'update',
@@ -512,14 +492,12 @@ export const updateTaskProgress = async (id, secondsToAdd) => {
         }
 
         try {
-            console.log('☁️ Attempting server update:', { taskId: id, time_spent: newTimeSpent });
-            const { data, error } = await supabase.from('tasks')
+            const { error } = await supabase.from('tasks')
                 .update({ time_spent: newTimeSpent })
                 .eq('id', id);
 
             if (error) {
-                console.error('❌ Supabase error:', error);
-                console.error('Error details:', { message: error.message, details: error.details, hint: error.hint });
+                console.error('Timer sync error:', error.message);
 
                 // Queue for retry
                 addToSyncQueue({
@@ -532,10 +510,9 @@ export const updateTaskProgress = async (id, secondsToAdd) => {
                 return;
             }
 
-            console.log('✅ Time update synced successfully:', data);
             lastSyncTime.set(Date.now());
         } catch (error) {
-            console.error('❌ Exception during time sync:', error);
+            console.error('Timer sync error:', error.message);
 
             // Queue for retry
             addToSyncQueue({
