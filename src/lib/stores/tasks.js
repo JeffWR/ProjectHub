@@ -305,6 +305,7 @@ export const moveTask = async (taskId, newStatus, targetIndex = -1) => {
 
     // 1. Complex Splicing Logic (PRESERVED)
     // This handles the visual drag-and-drop reordering locally
+    let updatedTasks;
     tasks.update(all => {
         const oldIndex = all.findIndex(t => t.id === taskId);
         if (oldIndex === -1) return all;
@@ -325,57 +326,92 @@ export const moveTask = async (taskId, newStatus, targetIndex = -1) => {
         } else {
             all.push(task);
         }
-        return [...all];
+
+        // Recalculate positions for all tasks
+        const tasksWithPositions = all.map((t, index) => ({
+            ...t,
+            position: index
+        }));
+
+        updatedTasks = tasksWithPositions;
+        return tasksWithPositions;
     });
 
-    // 2. Sync Status to Server
+    // 2. Sync Status AND Positions to Server
     const currentUser = get(user);
     console.log('Current user:', currentUser ? currentUser.email : 'not logged in');
 
     if (currentUser) {
-        const updates = { status: newStatus };
-        if (newStatus === 'archived') updates.completed_at = new Date().toISOString();
-
-        console.log('Preparing updates:', updates);
-
         const online = get(isOnline);
         console.log('Online status:', online);
 
         if (!online) {
+            // Queue for offline sync
             addToSyncQueue({
                 id: crypto.randomUUID(),
                 type: 'update',
                 taskId: taskId,
-                data: updates
+                data: { status: newStatus, completed_at: newStatus === 'archived' ? new Date().toISOString() : null }
+            });
+            // Also queue position updates for all tasks
+            updatedTasks.forEach(t => {
+                addToSyncQueue({
+                    id: crypto.randomUUID(),
+                    type: 'update',
+                    taskId: t.id,
+                    data: { position: t.position }
+                });
             });
             return;
         }
 
         try {
-            console.log('Attempting to sync task move:', { taskId, updates });
-            const { data, error } = await supabase.from('tasks').update(updates).eq('id', taskId);
-            if (error) {
-                console.error('Supabase error details:', error);
-                throw error;
+            console.log('Syncing positions for', updatedTasks.length, 'tasks');
+
+            // Update each task individually to avoid RLS issues with upsert
+            // Use Promise.all for parallel updates (faster than sequential)
+            const updatePromises = updatedTasks.map(t =>
+                supabase
+                    .from('tasks')
+                    .update({
+                        position: t.position,
+                        status: t.status,
+                        completed_at: t.completedAt
+                    })
+                    .eq('id', t.id)
+            );
+
+            const results = await Promise.all(updatePromises);
+
+            // Check if any updates failed
+            const errors = results.filter(r => r.error);
+            if (errors.length > 0) {
+                console.error('Some updates failed:', errors);
+                throw errors[0].error;
             }
-            console.log('Task move synced successfully:', data);
+
+            console.log('Task positions synced successfully');
             lastSyncTime.set(Date.now());
         } catch (error) {
-            console.error('Error syncing move:', error);
+            console.error('Error syncing positions:', error);
             console.error('Error message:', error.message);
-            console.error('Error details:', error.details);
-            console.error('Error hint:', error.hint);
             addToast(`Failed to sync task move: ${error.message}`, 'error');
 
             // Rollback on error
             tasks.set(originalTasks);
 
             // Add to queue for retry
-            addToSyncQueue({
-                id: crypto.randomUUID(),
-                type: 'update',
-                taskId: taskId,
-                data: updates
+            updatedTasks.forEach(t => {
+                addToSyncQueue({
+                    id: crypto.randomUUID(),
+                    type: 'update',
+                    taskId: t.id,
+                    data: {
+                        position: t.position,
+                        status: t.status,
+                        completed_at: t.completedAt
+                    }
+                });
             });
         }
     }
