@@ -24,6 +24,9 @@ export async function handleTimerCompletion(heroTask, completedTodayCount) {
     }
 
     // 2. If Break finished, automatically move to next phase (which will set correct duration)
+    // IMPORTANT: Wait for Svelte to process the "timer hit 0" state before advancing
+    await tick();
+    console.log('[handleTimerCompletion] Break finished, advancing to next phase...');
     await advancePhase(completedTodayCount);
     return { shouldShowModal: false };
 }
