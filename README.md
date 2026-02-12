@@ -118,7 +118,7 @@ ProjectHub combines task management with time-tracking capabilities, featuring a
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/JeffWR/ProjectHub.git
    cd ProjectHub
    ```
 
