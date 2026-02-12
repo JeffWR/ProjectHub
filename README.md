@@ -269,5 +269,3 @@ jeffwangrui@gmail.com
 - Icons from [Lucide](https://lucide.dev/)
 
 ---
-
-**Made with ❤️ for productivity enthusiasts**
