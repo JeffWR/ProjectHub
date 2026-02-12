@@ -17,6 +17,11 @@
     $: displayTime = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     $: activeTask = $heroTask;
 
+    // Debug: Log timer state changes
+    $: {
+        console.log(`[Timer Page] Reactive update - mode: ${$timer.mode}, timeLeft: ${$timer.timeLeft}, displayTime: ${displayTime}`);
+    }
+
     const isToday = (dateStr) => {
         const d = new Date(dateStr);
         const today = new Date();

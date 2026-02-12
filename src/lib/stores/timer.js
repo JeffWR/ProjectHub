@@ -40,7 +40,7 @@ function createTimer() {
     }
 
     const store = writable(initialData);
-    const { subscribe, update } = store;
+    const { subscribe, update, set } = store;
     let interval;
 
     // --- BATCHING STRATEGY ---
@@ -134,7 +134,8 @@ function createTimer() {
 
     const start = () => {
         const state = get(store);
-        
+        console.log(`start() called - current state:`, state);
+
         // Validation: Need a task for Pomodoro
         if (state.mode === 'pomodoro') {
             const allTasks = get(tasks);
@@ -145,14 +146,19 @@ function createTimer() {
         if (state.isRunning) return;
 
         // Mark the start time immediately so the first tick is accurate
-        update(s => ({ ...s, isRunning: true, lastTick: Date.now() }));
-        
+        update(s => {
+            console.log(`start() update - timeLeft before: ${s.timeLeft}`);
+            return { ...s, isRunning: true, lastTick: Date.now() };
+        });
+
         if (interval) clearInterval(interval);
-        
-        // Run the tick check often (e.g., every 250ms or 1s). 
-        // Since we use Math.floor(delta), running it faster won't speed up time, 
+
+        // Run the tick check often (e.g., every 250ms or 1s).
+        // Since we use Math.floor(delta), running it faster won't speed up time,
         // it just makes the UI more responsive when you switch tabs.
         interval = setInterval(tick, 1000);
+
+        console.log(`start() completed - interval started`);
     };
 
     const pause = () => {
@@ -191,17 +197,45 @@ function createTimer() {
     };
 
     const setModeWithDuration = (mode, minutes) => {
-        pause();
+        // Don't call pause() separately - do everything in one atomic update
+        // to avoid Svelte reactivity issues
+
+        // Sync any pending time before changing mode
+        syncAccumulatedTime(true);
+
+        // Clear the interval if running
+        if (interval) clearInterval(interval);
+
         // Ensure we have a valid positive number
         const safeMinutes = Math.max(1, parseInt(minutes) || 1);
         const newTimeLeft = safeMinutes * 60;
-        console.log(`setModeWithDuration: mode=${mode}, minutes=${minutes}, safeMinutes=${safeMinutes}, newTimeLeft=${newTimeLeft}`);
-        update(s => ({
-            ...s,
-            mode,
+        console.log(`setModeWithDuration BEFORE: mode=${mode}, minutes=${minutes}, safeMinutes=${safeMinutes}, newTimeLeft=${newTimeLeft}`);
+
+        // Get current state
+        const currentState = get(store);
+
+        // Create completely new state object using set() instead of update()
+        // to force Svelte to recognize the change
+        const newState = {
             timeLeft: newTimeLeft,
-            settings: { ...s.settings, [mode]: safeMinutes }
-        }));
+            isRunning: false,
+            mode: mode,
+            settings: {
+                pomodoro: mode === 'pomodoro' ? safeMinutes : currentState.settings.pomodoro,
+                short: mode === 'short' ? safeMinutes : currentState.settings.short,
+                long: mode === 'long' ? safeMinutes : currentState.settings.long
+            },
+            lastTick: null
+        };
+
+        console.log(`setModeWithDuration AFTER - setting new state:`, newState);
+        set(newState);  // Use set() instead of update() to force notification
+
+        // Verify the state after update
+        setTimeout(() => {
+            const verifyState = get(store);
+            console.log(`setModeWithDuration VERIFY (after timeout):`, verifyState);
+        }, 0);
     };
 
     // --- BROWSER VISIBILITY HANDLER ---
