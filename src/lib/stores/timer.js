@@ -21,7 +21,22 @@ function createTimer() {
     // Load from LocalStorage if available
     if (browser) {
         const saved = localStorage.getItem('timerState');
-        if (saved) initialData = { ...initialData, ...JSON.parse(saved) };
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Validate and merge settings to prevent corruption
+                if (parsed.settings) {
+                    parsed.settings = {
+                        pomodoro: Math.max(1, parseInt(parsed.settings.pomodoro) || defaultSettings.pomodoro),
+                        short: Math.max(1, parseInt(parsed.settings.short) || defaultSettings.short),
+                        long: Math.max(1, parseInt(parsed.settings.long) || defaultSettings.long)
+                    };
+                }
+                initialData = { ...initialData, ...parsed };
+            } catch (e) {
+                console.warn('Failed to load timer state from localStorage:', e);
+            }
+        }
     }
 
     const store = writable(initialData);
@@ -159,10 +174,10 @@ function createTimer() {
 
     const setMode = (mode) => {
         pause();
-        update(s => ({ 
-            ...s, 
-            mode, 
-            timeLeft: s.settings[mode] * 60 
+        update(s => ({
+            ...s,
+            mode,
+            timeLeft: s.settings[mode] * 60
         }));
     };
 
@@ -172,6 +187,20 @@ function createTimer() {
             ...s,
             timeLeft: safeMinutes * 60,
             settings: { ...s.settings, [s.mode]: safeMinutes }
+        }));
+    };
+
+    const setModeWithDuration = (mode, minutes) => {
+        pause();
+        // Ensure we have a valid positive number
+        const safeMinutes = Math.max(1, parseInt(minutes) || 1);
+        const newTimeLeft = safeMinutes * 60;
+        console.log(`setModeWithDuration: mode=${mode}, minutes=${minutes}, safeMinutes=${safeMinutes}, newTimeLeft=${newTimeLeft}`);
+        update(s => ({
+            ...s,
+            mode,
+            timeLeft: newTimeLeft,
+            settings: { ...s.settings, [mode]: safeMinutes }
         }));
     };
 
@@ -207,7 +236,7 @@ function createTimer() {
         interval = setInterval(tick, 1000);
     }
 
-    return { subscribe, start, pause, reset, setMode, setDuration };
+    return { subscribe, start, pause, reset, setMode, setDuration, setModeWithDuration };
 }
 
 export const timer = createTimer();

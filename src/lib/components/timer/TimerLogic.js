@@ -59,15 +59,36 @@ export async function advancePhase(completedTodayCount) {
 
 /**
  * Sets the mode (pomodoro/short/long) and updates duration from settings.
+ * Uses a single atomic update to prevent UI flicker.
  */
 export function applyMode(mode) {
-    const s = get(settings);
-    timer.setMode(mode);
-    
-    let duration = 25;
-    if (mode === 'pomodoro') duration = s?.pomodoro || 25;
-    if (mode === 'short') duration = s?.shortBreak || 5;
-    if (mode === 'long') duration = s?.longBreak || 15;
-    
-    timer.setDuration(duration);
+    const timerState = get(timer);
+    const globalSettings = get(settings);
+
+    // Validate mode parameter
+    if (!['pomodoro', 'short', 'long'].includes(mode)) {
+        console.warn(`Invalid timer mode: ${mode}, defaulting to pomodoro`);
+        mode = 'pomodoro';
+    }
+
+    // Use timer.settings (user's customized durations) first, fall back to global settings
+    // Important: Use explicit undefined check because 0 is falsy but valid
+    let duration;
+
+    if (mode === 'pomodoro') {
+        duration = timerState?.settings?.pomodoro ?? globalSettings?.pomodoro ?? 25;
+    } else if (mode === 'short') {
+        duration = timerState?.settings?.short ?? globalSettings?.shortBreak ?? 5;
+    } else if (mode === 'long') {
+        duration = timerState?.settings?.long ?? globalSettings?.longBreak ?? 15;
+    }
+
+    // Ensure duration is a valid positive number with multiple fallbacks
+    const parsedDuration = parseInt(duration);
+    const safeDuration = (parsedDuration > 0) ? parsedDuration : 25;
+
+    console.log(`applyMode: mode=${mode}, duration=${safeDuration}, timerSettings=`, timerState?.settings);
+
+    // Set mode and duration in a single atomic update to prevent showing 0
+    timer.setModeWithDuration(mode, safeDuration);
 }
