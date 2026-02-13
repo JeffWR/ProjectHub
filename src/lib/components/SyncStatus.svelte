@@ -116,7 +116,7 @@
     }
 
     :global(.sync-status .spin) {
-        animation: spin 1s linear infinite;
+        animation: spin 2.5s linear infinite;
     }
 
     @keyframes spin {

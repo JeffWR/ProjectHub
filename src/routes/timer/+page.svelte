@@ -117,7 +117,7 @@
 </script>
 
 <div class="glass-panel" class:dimmed={$timer.isRunning || isEditing || showCompleteModal} in:fly={{ y: 20, duration: 400 }}>
-    <div class="task-pill">
+    <div class="task-pill" style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
         {#if activeTask}
             <span class="active-dot">●</span> Working on: <strong>{activeTask.title}</strong>
         {:else}
@@ -140,11 +140,11 @@
          <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
     {/if}
 
-    <div class="controls" class:hidden={$timer.isRunning}>
+    <div class="controls" class:hidden={$timer.isRunning} style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
         <button class="btn-main" on:click={timer.start}>START</button>
     </div>
 
-    <div class="modes" class:hidden={$timer.isRunning}>
+    <div class="modes" class:hidden={$timer.isRunning} style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
         <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
         <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
         <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>

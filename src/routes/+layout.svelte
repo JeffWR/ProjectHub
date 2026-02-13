@@ -13,6 +13,12 @@
 
     let showSettings = false;
 
+    // Prevent hydration flash for user icon
+    let hydrated = false;
+    onMount(() => {
+        hydrated = true;
+    });
+
     // --- NEW REACTIVE LOGIC ---
     // When the user logs in, immediately pull their tasks from the cloud.
     $: if ($user) {
@@ -53,7 +59,7 @@
         </div>
 
         <div class="nav-right">
-            <button class="profile-btn" on:click={() => showSettings = true}>
+            <button class="profile-btn" on:click={() => showSettings = true} style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
                 {#if $user && $user.email}
                     <span class="user-name">{$user.email.split('@')[0]}</span>
                     <div class="avatar-circle">

@@ -4,9 +4,16 @@
     import TaskModal from '$lib/components/TaskModal.svelte';
     import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
     import { Plus, LayoutList } from 'lucide-svelte';
+    import { onMount } from 'svelte';
 
     let showModal = false;
     let selectedTask = null;
+
+    // Prevent hydration flash
+    let hydrated = false;
+    onMount(() => {
+        hydrated = true;
+    });
 
     $: todoTasks = $tasks.filter(t => t.status === 'todo');
     $: progressTasks = $tasks.filter(t => t.status === 'inprogress');
@@ -378,6 +385,7 @@
                         on:dblclick={() => openTaskDetail(task)}
                         role="listitem"
                         title="Double-click to view details"
+                        style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out"
                     >
                         <TaskItem {task} />
                     </div>
