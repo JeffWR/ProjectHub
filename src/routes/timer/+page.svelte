@@ -1,4 +1,6 @@
 <script>
+    import { browser } from '$app/environment';
+    import { onMount } from 'svelte';
     import { timer } from '$lib/stores/timer';
     import { tasks, heroTask } from '$lib/stores/tasks';
     import { settings } from '$lib/stores/settings';
@@ -10,6 +12,12 @@
 
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
     import TimeEditor from '$lib/components/timer/TimeEditor.svelte';
+
+    // Prevent hydration flash: only show values once client hydrates
+    let hydrated = false;
+    onMount(() => {
+        hydrated = true;
+    });
 
     // --- DISPLAY LOGIC ---
     $: minutes = Math.floor($timer.timeLeft / 60);
@@ -118,15 +126,18 @@
     </div>
 
     {#if !$timer.isRunning && !isEditing}
-        <h1 
-            class="timer-digits dashboard-timer" 
-            on:click={startEditing} 
-            in:receive={{ key: 'timer-move' }} 
-            out:send={{ key: 'timer-move' }}
-            title="Click to edit"
-        >
-            {displayTime}
-        </h1>
+        {#key hydrated}
+            <h1
+                class="timer-digits dashboard-timer"
+                on:click={startEditing}
+                in:receive={{ key: 'timer-move' }}
+                out:send={{ key: 'timer-move' }}
+                title="Click to edit"
+                style="opacity: {hydrated ? 1 : 0.5}; transition: opacity 0.15s ease-out"
+            >
+                {displayTime}
+            </h1>
+        {/key}
     {:else}
          <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
     {/if}
