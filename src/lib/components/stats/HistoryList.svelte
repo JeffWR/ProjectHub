@@ -1,10 +1,16 @@
 <script>
+    import { onMount } from 'svelte';
     import { ChevronDown } from 'lucide-svelte';
     export let archiveList = [];
 
     let listContainer;
     let isExpanded = false;
     let isClosing = false;
+    let mounted = false;
+
+    onMount(() => {
+        setTimeout(() => { mounted = true; }, 50);
+    });
 
     async function toggleExpand() {
         if (isExpanded) {
@@ -22,12 +28,12 @@
 <div class="stat-box archive-box">
     <div class="stat-header">
         <h3>History</h3>
-        <span class="stat-label">{archiveList.length} completed</span>
+        <span class="stat-label" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.3s ease">{archiveList.length} completed</span>
     </div>
 
     <div class="list-container" class:scroll-mode={isExpanded} class:closing={isClosing} bind:this={listContainer}>
-        {#each (isExpanded ? archiveList : archiveList.slice(0, 5)) as t (t.id)}
-            <div class="stat-list-row">
+        {#each (isExpanded ? archiveList : archiveList.slice(0, 5)) as t, i (t.id)}
+            <div class="stat-list-row" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.3s ease {i * 0.08}s">
                 <div class="row-main">
                     <span class="r-title">{t.title}</span>
                     <span class="stat-label">{t.dateStr}</span>
@@ -35,7 +41,7 @@
                 <span class="stat-badge green">{Math.floor(t.timeSpent||0)}m</span>
             </div>
         {/each}
-        {#if archiveList.length === 0}
+        {#if mounted && archiveList.length === 0}
             <div class="stat-empty">No completed tasks yet.</div>
         {/if}
     </div>

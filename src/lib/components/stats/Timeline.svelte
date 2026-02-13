@@ -11,6 +11,7 @@
     const PIXELS_PER_HOUR = 80;
 
     let timelineScroll;
+    let mounted = false;
 
     onMount(() => {
         if (timelineScroll && isSameDay(selectedDate, new Date())) {
@@ -23,6 +24,7 @@
             // Scroll so current time is centered
             timelineScroll.scrollTop = currentPosition - (containerHeight / 2);
         }
+        setTimeout(() => { mounted = true; }, 50);
     });
 
     // Also scroll to center when date changes to today
@@ -40,7 +42,7 @@
         <button class="nav-btn" on:click={() => onChangeDate(-1)}>
             <ChevronLeft size={18}/>
         </button>
-        <div class="date-display">
+        <div class="date-display" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.3s ease">
             <span class="stat-value day-num">{selectedDate.getDate()}</span>
             <span class="stat-label month-name">{selectedDate.toLocaleString('default', { month: 'long' })}</span>
         </div>
@@ -52,16 +54,17 @@
     <div class="timeline-scroll" bind:this={timelineScroll}>
         <div class="daily-grid" style="height: {HOURS_IN_DAY * PIXELS_PER_HOUR}px">
             {#each Array(HOURS_IN_DAY) as _, h}
-                <div class="grid-hour" style="top: {h * PIXELS_PER_HOUR}px; height: {PIXELS_PER_HOUR}px;">
+                <div class="grid-hour" style="top: {h * PIXELS_PER_HOUR}px; height: {PIXELS_PER_HOUR}px; opacity: {mounted ? 1 : 0}; transition: opacity 0.25s ease">
                     <span class="grid-label stat-label">{h}:00</span>
-                    <div class="grid-line"></div>
+                    <div class="grid-line" class:animate={mounted} style="transition-delay: {0.3 + h * 0.02}s"></div>
                 </div>
             {/each}
 
-            {#each timelineSessions as t}
+            {#each timelineSessions as t, i}
                 <div
                     class="event-block"
-                    style="top: {t.top}px; height: {t.height}px;"
+                    class:animate={mounted}
+                    style="top: {t.top}px; height: {t.height}px; transition-delay: {i * 0.05}s"
                     title="{t.label}&#10;{selectedDate.toLocaleDateString()} • {t.timeRange} ({t.duration}m)"
                 >
                     <div class="ev-content">
@@ -72,7 +75,7 @@
             {/each}
 
             {#if isSameDay(selectedDate, new Date())}
-                <div class="now-indicator" style="top: {((new Date().getHours() * 60) + new Date().getMinutes()) / 60 * PIXELS_PER_HOUR}px"></div>
+                <div class="now-indicator" class:animate={mounted} style="top: {((new Date().getHours() * 60) + new Date().getMinutes()) / 60 * PIXELS_PER_HOUR}px"></div>
             {/if}
         </div>
     </div>
@@ -170,6 +173,13 @@
         flex: 1;
         border-top: 1px solid rgba(255, 255, 255, 0.05);
         height: 100%;
+        transform-origin: left center;
+        transform: scaleX(0);
+        transition: transform 0.4s ease;
+    }
+
+    .grid-line.animate {
+        transform: scaleX(1);
     }
 
     .event-block {
@@ -182,8 +192,15 @@
         padding: 6px 10px;
         overflow: hidden;
         z-index: 10;
-        transition: all 0.2s;
         cursor: default;
+        opacity: 0;
+        transform: translateX(-20px);
+        transition: all 0.2s, opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .event-block.animate {
+        opacity: 1;
+        transform: translateX(0);
     }
 
     .event-block:hover {
@@ -224,6 +241,13 @@
         background: #0984e3;
         z-index: 20;
         box-shadow: 0 0 6px #0984e3;
+        transform-origin: left center;
+        transform: scaleX(0);
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+    }
+
+    .now-indicator.animate {
+        transform: scaleX(1);
     }
 
     .now-indicator::before {
@@ -235,5 +259,11 @@
         height: 8px;
         border-radius: 50%;
         background: #0984e3;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.7; }
     }
 </style>

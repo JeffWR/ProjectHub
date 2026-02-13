@@ -4,11 +4,13 @@
     export let stats = {}; // { avgPomo, totalHours, totalArchived }
 
     let heatmapContainer;
+    let mounted = false;
 
     onMount(() => {
         if (heatmapContainer) {
             heatmapContainer.scrollLeft = (heatmapContainer.scrollWidth - heatmapContainer.clientWidth) / 2;
         }
+        setTimeout(() => { mounted = true; }, 50);
     });
 </script>
 
@@ -19,10 +21,10 @@
     </div>
 
     <div class="heatmap-container" bind:this={heatmapContainer}>
-        <div class="heatmap-grid">
-            {#each heatmapData as week}
+        <div class="heatmap-grid" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.4s ease-out">
+            {#each heatmapData as week, weekIndex}
                 <div class="heat-col">
-                    {#each week as day}
+                    {#each week as day, dayIndex}
                         <div class="heat-cell-wrapper">
                             <div
                                 class="heat-cell level-{day.intensity}"
@@ -37,27 +39,27 @@
     </div>
 
     <div class="legend-row">
-        <span class="stat-label">Less</span>
+        <span class="stat-label" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.2s ease-out 0s">Less</span>
         <div class="legend-scale">
             {#each [0,1,2,3,4] as i}
-                <div class="heat-cell level-{i}"></div>
+                <div class="heat-cell level-{i}" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.2s ease-out {0.05 + i * 0.03}s"></div>
             {/each}
         </div>
-        <span class="stat-label">More</span>
+        <span class="stat-label" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.2s ease-out 0.2s">More</span>
     </div>
 
     <div class="stat-divider"></div>
 
     <div class="stats-summary">
-        <div class="s-item">
+        <div class="s-item" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.2s ease-out 0.1s">
             <span class="stat-value">{stats.avgPomo}m</span>
             <span class="stat-label">Avg</span>
         </div>
-        <div class="s-item">
+        <div class="s-item" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.2s ease-out 0.15s">
             <span class="stat-value">{stats.totalHours}h</span>
             <span class="stat-label">Total</span>
         </div>
-        <div class="s-item">
+        <div class="s-item" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.2s ease-out 0.2s">
             <span class="stat-value">{stats.totalArchived}</span>
             <span class="stat-label">Tasks</span>
         </div>

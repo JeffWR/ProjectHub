@@ -1,13 +1,19 @@
 <script>
+    import { onMount } from 'svelte';
     export let weekData = [];
     export let todayTasks = 0;
     export let activeTasks = 0;
+
+    let mounted = false;
+    onMount(() => {
+        setTimeout(() => { mounted = true; }, 50);
+    });
 </script>
 
 <div class="stat-box">
     <div class="stat-header">
         <h3>Tasks</h3>
-        <span class="stat-badge green">{todayTasks} / {activeTasks} Active</span>
+        <span class="stat-badge green" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.3s ease">{todayTasks} / {activeTasks} Active</span>
     </div>
 
     <div class="chart-labels-top">
@@ -15,11 +21,11 @@
     </div>
 
     <div class="graph-row">
-        {#each weekData as d}
+        {#each weekData as d, i}
             <div class="graph-col" class:stat-active={d.isToday} class:stat-inactive={!d.isToday}>
                 <div class="bar-container">
                     <div class="bar" style="height: {Math.min(60, d.tasks * 12)}px"></div>
-                    {#if d.tasks > 0}<span class="bar-val stat-value">{d.tasks}</span>{/if}
+                    {#if d.tasks > 0}<span class="bar-val stat-value" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.3s ease {i * 0.05}s">{d.tasks}</span>{/if}
                 </div>
             </div>
         {/each}

@@ -265,7 +265,7 @@
              on:drop={(e) => handleZoneDrop(e, 'todo')}
              on:dragover|preventDefault>
 
-            <div class="header"><h3>To Do</h3><span class="badge">{todoTasks.length}</span></div>
+            <div class="header"><h3>To Do</h3><span class="badge" style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.3s ease">{todoTasks.length}</span></div>
             <div class="scroll-area">
                 {#each todoTasks as task, index (task.id)}
                     <!-- Show placeholder BEFORE task if cursor is in top half -->
@@ -313,7 +313,7 @@
          on:drop={(e) => handleZoneDrop(e, 'inprogress')}
          on:dragover|preventDefault>
 
-        <div class="header highlight"><h3>In Focus</h3><span class="badge">{progressTasks.length}</span></div>
+        <div class="header highlight"><h3>In Focus</h3><span class="badge" style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.3s ease">{progressTasks.length}</span></div>
         <div class="scroll-area">
             {#each progressTasks as task, index (task.id)}
                 <!-- Show placeholder BEFORE task if cursor is in top half -->
@@ -357,7 +357,7 @@
                 {/if}
             {/each}
 
-            {#if progressTasks.length === 0}
+            {#if hydrated && progressTasks.length === 0}
                 <div class="empty-placeholder">Drag tasks here to work on them</div>
             {/if}
         </div>
@@ -369,7 +369,7 @@
              on:drop={(e) => handleZoneDrop(e, 'review')}
              on:dragover|preventDefault>
 
-            <div class="header"><h3>Review</h3><span class="badge">{reviewTasks.length}</span></div>
+            <div class="header"><h3>Review</h3><span class="badge" style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.3s ease">{reviewTasks.length}</span></div>
             <div class="scroll-area">
                 {#each reviewTasks as task, index (task.id)}
                     <!-- Show placeholder BEFORE task if cursor is in top half -->
