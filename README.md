@@ -206,7 +206,6 @@ npm run preview
 src/
 ├── lib/
 │   ├── components/       # Reusable UI components
-│   │   ├── TaskBoard.svelte
 │   │   ├── TaskItem.svelte
 │   │   ├── TaskModal.svelte
 │   │   └── stats/        # Statistics components
