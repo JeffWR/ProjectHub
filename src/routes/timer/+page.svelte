@@ -116,8 +116,9 @@
     }
 </script>
 
+{#if hydrated}
 <div class="glass-panel" class:dimmed={$timer.isRunning || isEditing || showCompleteModal} in:fly={{ y: 20, duration: 400 }}>
-    <div class="task-pill" style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
+    <div class="task-pill">
         {#if activeTask}
             <span class="active-dot">●</span> Working on: <strong class="task-title">{activeTask.title}</strong>
         {:else}
@@ -132,7 +133,6 @@
             in:receive={{ key: 'timer-move' }}
             out:send={{ key: 'timer-move' }}
             title="Click to edit"
-            style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.2s ease-out"
         >
             {displayTime}
         </h1>
@@ -140,11 +140,11 @@
          <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
     {/if}
 
-    <div class="controls" class:hidden={$timer.isRunning} style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
+    <div class="controls" class:hidden={$timer.isRunning}>
         <button class="btn-main" on:click={timer.start}>START</button>
     </div>
 
-    <div class="modes" class:hidden={$timer.isRunning} style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
+    <div class="modes" class:hidden={$timer.isRunning}>
         <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
         <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
         <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
@@ -154,6 +154,7 @@
         Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
     </div>
 </div>
+{/if}
 
 {#if $timer.isRunning}
     <div 
