@@ -1,7 +1,7 @@
 <script>
     import { createEventDispatcher } from 'svelte';
     import { fade, scale } from 'svelte/transition';
-    import { X, Trash2, Save, Calendar, Flag, AlignLeft } from 'lucide-svelte';
+    import { X, Trash2, Calendar, Flag, AlignLeft } from 'lucide-svelte';
     import { tasks } from '$lib/stores/tasks';
 
     export let task; 
@@ -105,7 +105,7 @@
         padding: 20px;
     }
 
-    /* 3. MAIN MODAL (Reverted to compact auto-height) */
+    /* 3. MAIN MODAL (Compact auto-height layout) */
     .modal-glass {
         width: 100%; max-width: 600px;
         /* Let it grow naturally, but don't overflow screen */

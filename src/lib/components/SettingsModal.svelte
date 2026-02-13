@@ -1,7 +1,7 @@
 <script>
     import { createEventDispatcher } from 'svelte';
     import { fade, scale } from 'svelte/transition';
-    import { X, User, LogOut, Loader2, Mail, Lock } from 'lucide-svelte';
+    import { X, User, LogOut, Loader2, Mail } from 'lucide-svelte';
     import { supabase } from '$lib/supabase';
     import { user } from '$lib/stores/auth';
     import { addToast } from '$lib/stores/toast';

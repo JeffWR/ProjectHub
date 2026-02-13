@@ -17,19 +17,3 @@ if (supabaseAnonKey && !supabaseAnonKey.startsWith('eyJ')) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Health check function for debugging
-export const testConnection = async () => {
-    try {
-        const { error } = await supabase.from('tasks').select('count', { count: 'exact', head: true });
-        if (error) {
-            console.error('❌ Supabase connection test failed:', error.message);
-            return false;
-        }
-        console.log('✅ Supabase connection successful');
-        return true;
-    } catch (err) {
-        console.error('❌ Supabase connection test error:', err);
-        return false;
-    }
-};

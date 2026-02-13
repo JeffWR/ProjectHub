@@ -79,7 +79,6 @@
 </div>
 
 <style>
-    /* ... Keep your existing Card Styles ... */
     .task-card {
         background: white;
         border-radius: 16px; 
@@ -95,17 +94,16 @@
 
     /* Typography */
     h4 { margin: 0 0 8px 0; font-size: 1.1rem; color: #2d3436; font-weight: 700; }
-    .desc { 
-        font-size: 0.9rem; 
-        color: #636e72; 
-        margin: 0 0 15px 0; 
-        overflow: hidden; 
-        white-space: normal; 
-        word-break: break-word;  
+    .desc {
+        font-size: 0.9rem;
+        color: #636e72;
+        margin: 0 0 15px 0;
+        overflow: hidden;
+        white-space: normal;
+        word-break: break-word;
         display: -webkit-box;
         -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
-        overflow: hidden;
     }
 
     /* Header */
