@@ -64,14 +64,12 @@
         display: flex;
         flex-direction: column;
         gap: 0;
-        max-height: 300px;
+        max-height: 240px;
         overflow: hidden;
         transition: max-height 0.2s ease-out;
         -webkit-mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
         mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
         margin-top: 8px;
-        flex: 1;
-        min-height: 0;
     }
 
     .list-container.scroll-mode {

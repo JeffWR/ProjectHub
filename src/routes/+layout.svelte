@@ -25,6 +25,21 @@
         loadTasks();
     }
     // --------------------------
+
+    // --- SLIDING INDICATOR LOGIC ---
+    let navLinks = {};
+    let indicatorStyle = '';
+
+    $: {
+        const path = $page.url.pathname;
+        const activeLink = navLinks[path];
+        if (activeLink) {
+            const rect = activeLink.getBoundingClientRect();
+            const parentRect = activeLink.parentElement.getBoundingClientRect();
+            const left = rect.left - parentRect.left;
+            indicatorStyle = `left: ${left}px; width: ${rect.width}px;`;
+        }
+    }
 </script>
 
 <Toast />
@@ -43,15 +58,18 @@
         </div>
 
         <div class="nav-center">
-            <a href="/tasks" class:active={$page.url.pathname === '/tasks'}>
-                <ListTodo size={18} /> Tasks
-            </a>
-            <a href="/timer" class:active={$page.url.pathname === '/timer'}>
-                <Timer size={18} /> Timer
-            </a>
-            <a href="/stats" class:active={$page.url.pathname === '/stats'}>
-                <BarChart3 size={18} /> Stats
-            </a>
+            <div class="nav-links-wrapper">
+                <div class="nav-indicator" style={indicatorStyle}></div>
+                <a href="/tasks" class:active={$page.url.pathname === '/tasks'} bind:this={navLinks['/tasks']}>
+                    <ListTodo size={18} /> Tasks
+                </a>
+                <a href="/timer" class:active={$page.url.pathname === '/timer'} bind:this={navLinks['/timer']}>
+                    <Timer size={18} /> Timer
+                </a>
+                <a href="/stats" class:active={$page.url.pathname === '/stats'} bind:this={navLinks['/stats']}>
+                    <BarChart3 size={18} /> Stats
+                </a>
+            </div>
         </div>
 
         <div class="nav-sync">
@@ -110,13 +128,29 @@
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
-        display: flex;
-        gap: 8px;
         background: rgba(255, 255, 255, 0.15);
         padding: 6px;
         border-radius: 50px;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-links-wrapper {
+        position: relative;
+        display: flex;
+        gap: 8px;
+    }
+
+    .nav-indicator {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        height: 44px;
+        background: white;
+        border-radius: 40px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 0;
     }
 
     a {
@@ -129,16 +163,16 @@
         gap: 8px;
         font-size: 0.9rem;
         font-weight: 500;
-        transition: all 0.2s ease;
+        transition: color 0.2s ease;
+        position: relative;
+        z-index: 1;
     }
 
-    a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-    
+    a:hover { color: white; }
+
     a.active {
-        background: white;
         color: #ba4949;
         font-weight: 600;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
     .nav-sync {

@@ -88,7 +88,7 @@
         justify-content: center;
         align-items: center;
         gap: 16px;
-        margin-top: 8px;
+        margin-top: -8px;
     }
 
     .p-stat {
