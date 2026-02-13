@@ -126,18 +126,16 @@
     </div>
 
     {#if !$timer.isRunning && !isEditing}
-        {#key hydrated}
-            <h1
-                class="timer-digits dashboard-timer"
-                on:click={startEditing}
-                in:receive={{ key: 'timer-move' }}
-                out:send={{ key: 'timer-move' }}
-                title="Click to edit"
-                style="opacity: {hydrated ? 1 : 0.5}; transition: opacity 0.15s ease-out"
-            >
-                {displayTime}
-            </h1>
-        {/key}
+        <h1
+            class="timer-digits dashboard-timer"
+            on:click={startEditing}
+            in:receive={{ key: 'timer-move' }}
+            out:send={{ key: 'timer-move' }}
+            title="Click to edit"
+            style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.2s ease-out"
+        >
+            {displayTime}
+        </h1>
     {:else}
          <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
     {/if}
