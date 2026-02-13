@@ -48,6 +48,11 @@
         const dragElement = event.currentTarget;
         draggedTaskHeight = dragElement.offsetHeight;
 
+        // Calculate where the user clicked relative to the element
+        const rect = dragElement.getBoundingClientRect();
+        const offsetX = event.clientX - rect.left + 30; // +30 for wrapper padding
+        const offsetY = event.clientY - rect.top + 30;  // +30 for wrapper padding
+
         // Create a wrapper with extra space for the tilted element
         const wrapper = document.createElement('div');
         wrapper.style.position = 'absolute';
@@ -67,9 +72,7 @@
         wrapper.appendChild(clone);
         document.body.appendChild(wrapper);
 
-        // Set the wrapper as the drag image (offset includes padding)
-        const offsetX = dragElement.offsetWidth / 2 + 30;
-        const offsetY = dragElement.offsetHeight / 2 + 30;
+        // Set the wrapper as the drag image with the click offset
         event.dataTransfer.setDragImage(wrapper, offsetX, offsetY);
 
         // Clean up after drag starts
