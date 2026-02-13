@@ -115,7 +115,7 @@
         <div class="status-msg">
             {#if mode === 'pomodoro'}
                 {#if $heroTask}
-                    Focusing on: <span>{$heroTask.title}</span>
+                    Focusing on: <span class="task-title">{$heroTask.title}</span>
                 {:else}
                     Time to Focus
                 {/if}
@@ -157,6 +157,7 @@
     .time-text { font-size: 6rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 10px; }
     .status-msg { color: rgba(255,255,255,0.6); margin-bottom: 30px; font-size: 1.1rem; text-align: center; }
     .status-msg span { color: white; font-weight: 600; }
+    .task-title { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
     .controls { display: flex; align-items: center; gap: 20px; }
     .toggle-btn { width: 80px; height: 80px; border-radius: 24px; background: #ba4949; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; box-shadow: 0 10px 20px rgba(186, 73, 73, 0.3); }

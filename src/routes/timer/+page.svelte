@@ -119,7 +119,7 @@
 <div class="glass-panel" class:dimmed={$timer.isRunning || isEditing || showCompleteModal} in:fly={{ y: 20, duration: 400 }}>
     <div class="task-pill" style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out">
         {#if activeTask}
-            <span class="active-dot">●</span> Working on: <strong>{activeTask.title}</strong>
+            <span class="active-dot">●</span> Working on: <strong class="task-title">{activeTask.title}</strong>
         {:else}
             <span class="inactive">Drag a task to "In Focus" to start</span>
         {/if}
@@ -170,7 +170,7 @@
         <div class="focus-content">
             <div class="focus-task" in:fly={{ y: -20, duration: 1200, delay: 300 }}>
                 {#if activeTask}
-                    {activeTask.title}
+                    <span class="focus-task-title">{activeTask.title}</span>
                 {:else}
                     Focus Mode
                 {/if}
@@ -289,7 +289,8 @@
         display: flex; flex-direction: column; align-items: center; gap: 40px;
         transform: translateY(-20px);
     }
-    .focus-task { font-size: 1.5rem; color: rgba(255,255,255,0.6); font-weight: 500; letter-spacing: 0.5px; }
+    .focus-task { font-size: 1.5rem; color: rgba(255,255,255,0.6); font-weight: 500; letter-spacing: 0.5px; max-width: 80vw; text-align: center; }
+    .focus-task-title { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .timer-wrapper { position: relative; width: 500px; height: 500px; display: flex; align-items: center; justify-content: center; }
     .progress-ring { position: absolute; top: 0; left: 0; transform: rotate(-90deg); pointer-events: none; transition: opacity 0.3s ease; }
     .progress-ring__circle { transition: stroke-dashoffset 0.05s linear; stroke-linecap: round; }
@@ -299,7 +300,8 @@
     /* --- UTILS --- */
     .hidden { display: none; }
     
-    .task-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
+    .task-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; max-width: 90%; }
+    .task-title { display: inline-block; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
     .active-dot { color: #4caf50; font-size: 0.8rem; }
     .inactive { opacity: 0.6; font-style: italic; }
     
