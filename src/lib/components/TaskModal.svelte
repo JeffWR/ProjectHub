@@ -47,8 +47,8 @@
 </script>
 
 {#if isOpen}
-    <div class="backdrop" transition:fade on:click={onClose}>
-        <div class="modal" transition:fly={{ y: 20 }} on:click|stopPropagation>
+    <div class="backdrop" transition:fade>
+        <div class="modal" transition:fly={{ y: 20 }}>
             <div class="header">
                 <h2>{taskToEdit ? 'Edit Task' : 'Create New Task'}</h2>
                 <button class="close-btn" on:click={onClose}><X size={20}/></button>
@@ -106,6 +106,7 @@
     
     label { font-size: 0.85rem; font-weight: 600; color: #666; display: flex; flex-direction: column; gap: 8px; }
     input, textarea { padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; font-size: 1rem; transition: 0.2s; }
+    textarea { resize: none; }
     input:focus, textarea:focus { border-color: #ba4949; outline: none; }
 
     .row { display: flex; gap: 20px; }
