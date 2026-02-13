@@ -9,10 +9,13 @@
     let showModal = false;
     let selectedTask = null;
 
-    // Prevent hydration flash
+    // Prevent hydration flash and trigger staggered animation
     let hydrated = false;
     onMount(() => {
-        hydrated = true;
+        // Small delay ensures the browser paints the initial opacity: 0 state
+        requestAnimationFrame(() => {
+            hydrated = true;
+        });
     });
 
     $: todoTasks = $tasks.filter(t => t.status === 'todo');
@@ -261,7 +264,7 @@
 
             <div class="header"><h3>To Do</h3><span class="badge">{todoTasks.length}</span></div>
             <div class="scroll-area">
-                {#each todoTasks as task (task.id)}
+                {#each todoTasks as task, index (task.id)}
                     <!-- Show placeholder BEFORE task if cursor is in top half -->
                     {#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
                         <div class="drop-placeholder"
@@ -283,6 +286,7 @@
                         on:dblclick={() => openTaskDetail(task)}
                         role="listitem"
                         title="Double-click to view details"
+                        style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated ? 0 : 20}px); transition: opacity 0.6s ease-out {index * 0.12}s, transform 0.6s ease-out {index * 0.12}s"
                     >
                         <TaskItem {task} />
                     </div>
@@ -330,6 +334,7 @@
                     on:dblclick={() => openTaskDetail(task)}
                     role="listitem"
                     title="Double-click to view details"
+                    style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated ? 0 : 20}px); transition: opacity 0.6s ease-out {index * 0.12}s, transform 0.6s ease-out {index * 0.12}s"
                 >
                     <TaskItem
                         {task}
@@ -363,7 +368,7 @@
 
             <div class="header"><h3>Review</h3><span class="badge">{reviewTasks.length}</span></div>
             <div class="scroll-area">
-                {#each reviewTasks as task (task.id)}
+                {#each reviewTasks as task, index (task.id)}
                     <!-- Show placeholder BEFORE task if cursor is in top half -->
                     {#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
                         <div class="drop-placeholder"
@@ -385,7 +390,7 @@
                         on:dblclick={() => openTaskDetail(task)}
                         role="listitem"
                         title="Double-click to view details"
-                        style="opacity: {hydrated ? 1 : 0}; transition: opacity 0.5s ease-out"
+                        style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated ? 0 : 20}px); transition: opacity 0.6s ease-out {index * 0.12}s, transform 0.6s ease-out {index * 0.12}s"
                     >
                         <TaskItem {task} />
                     </div>
