@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, tick } from 'svelte';
     import { ChevronDown } from 'lucide-svelte';
     export let archiveList = [];
 
@@ -7,10 +7,45 @@
     let isExpanded = false;
     let isClosing = false;
     let mounted = false;
+    let visibleCount = 10; // Default fallback - show more initially
 
-    onMount(() => {
+    onMount(async () => {
         setTimeout(() => { mounted = true; }, 50);
+
+        // Calculate how many items fit in the container after a delay
+        setTimeout(async () => {
+            await tick();
+            if (listContainer && archiveList.length > 0) {
+                const maxHeight = 400; // Increased max container height
+                const firstRow = listContainer.querySelector('.stat-list-row');
+                if (firstRow) {
+                    const rowHeight = firstRow.offsetHeight;
+                    console.log('Row height:', rowHeight, 'Max height:', maxHeight);
+                    if (rowHeight > 0) {
+                        visibleCount = Math.floor(maxHeight / rowHeight);
+                        console.log('Calculated visibleCount:', visibleCount);
+                    }
+                }
+            }
+        }, 200);
     });
+
+    $: if (mounted && listContainer && archiveList.length > 0) {
+        // Recalculate if archiveList changes
+        tick().then(() => {
+            const maxHeight = 400;
+            const firstRow = listContainer.querySelector('.stat-list-row');
+            if (firstRow) {
+                const rowHeight = firstRow.offsetHeight;
+                if (rowHeight > 0) {
+                    const newCount = Math.floor(maxHeight / rowHeight);
+                    if (newCount > visibleCount) {
+                        visibleCount = newCount;
+                    }
+                }
+            }
+        });
+    }
 
     async function toggleExpand() {
         if (isExpanded) {
@@ -32,7 +67,7 @@
     </div>
 
     <div class="list-container" class:scroll-mode={isExpanded} class:closing={isClosing} bind:this={listContainer}>
-        {#each (isExpanded ? archiveList : archiveList.slice(0, 5)) as t, i (t.id)}
+        {#each (isExpanded ? archiveList : archiveList.slice(0, visibleCount)) as t, i (t.id)}
             <div class="stat-list-row" style="opacity: {mounted ? 1 : 0}; transition: opacity 0.3s ease {i * 0.08}s">
                 <div class="row-main">
                     <span class="r-title">{t.title}</span>
@@ -46,14 +81,12 @@
         {/if}
     </div>
 
-    {#if archiveList.length > 5}
-        <button class="stat-button expand-btn" on:click={toggleExpand}>
-            <div class="arrow-wrap" class:flipped={isExpanded}>
-                <ChevronDown size={14} />
-            </div>
-            {isExpanded ? 'Show Less' : 'Show More'}
-        </button>
-    {/if}
+    <button class="stat-button expand-btn" on:click={toggleExpand}>
+        <div class="arrow-wrap" class:flipped={isExpanded}>
+            <ChevronDown size={14} />
+        </div>
+        {isExpanded ? 'Show Less' : 'Show More'}
+    </button>
 </div>
 
 <style>
@@ -70,11 +103,11 @@
         display: flex;
         flex-direction: column;
         gap: 0;
-        max-height: 240px;
+        max-height: 400px;
         overflow: hidden;
         transition: max-height 0.2s ease-out;
-        -webkit-mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
-        mask-image: linear-gradient(to bottom, black 50%, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 30px), transparent 100%);
+        mask-image: linear-gradient(to bottom, black calc(100% - 30px), transparent 100%);
         margin-top: 8px;
     }
 
@@ -83,8 +116,6 @@
         max-height: none;
         padding-bottom: 20px;
         scrollbar-width: none;
-        -webkit-mask-position: 0 100%;
-        mask-position: 0 100%;
     }
 
     .list-container.scroll-mode::-webkit-scrollbar {
@@ -92,8 +123,6 @@
     }
 
     .list-container.closing {
-        -webkit-mask-position: 0 0 !important;
-        mask-position: 0 0 !important;
         transition: none !important;
         overflow-y: hidden;
     }
