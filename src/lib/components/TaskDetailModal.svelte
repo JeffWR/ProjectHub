@@ -1,10 +1,10 @@
 <script>
     import { createEventDispatcher } from 'svelte';
     import { fade, scale } from 'svelte/transition';
-    import { X, Trash2, Calendar, Flag, AlignLeft } from 'lucide-svelte';
-    import { tasks } from '$lib/stores/tasks';
+    import { X, Trash2, Calendar, Flag, AlignLeft, Clock } from 'lucide-svelte';
+    import { tasks, updateTask } from '$lib/stores/tasks';
 
-    export let task; 
+    export let task;
 
     const dispatch = createEventDispatcher();
 
@@ -12,14 +12,31 @@
     let description = task.description || "";
     let priority = task.priority || "Medium";
 
+    const originalMinutes = task.estTime || 25;
+    let estMinutes = originalMinutes;
+    let timeRaw = String(estMinutes); // string so the field can be empty while editing
+
+    function onTimeInput(e) {
+        timeRaw = e.target.value;
+    }
+
+    function onTimeBlur() {
+        const parsed = parseInt(timeRaw, 10);
+        if (!timeRaw || isNaN(parsed) || parsed < 1) {
+            estMinutes = originalMinutes;
+        } else {
+            estMinutes = Math.min(parsed, 999);
+        }
+        timeRaw = String(estMinutes);
+    }
+
     const dateCreated = new Date(task.createdAt || Date.now()).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric'
     });
 
     function saveChanges() {
-        tasks.update(all => all.map(t => 
-            t.id === task.id ? { ...t, title, description, priority } : t
-        ));
+        const totalMinutes = estMinutes;
+        updateTask(task.id, { title, description, priority, estTime: totalMinutes });
         dispatch('close');
     }
 
@@ -54,17 +71,35 @@
             />
         </div>
 
-        <div class="meta-row">
-            <div class="label"><Flag size={16} /> Priority</div>
-            <div class="priority-options">
-                {#each ['High', 'Medium', 'Low'] as p}
-                    <button 
-                        class="p-btn {p} {priority === p ? 'active' : ''}" 
-                        on:click={() => priority = p}
-                    >
-                        {p}
-                    </button>
-                {/each}
+        <div class="meta-row priority-time-meta">
+            <div class="meta-col">
+                <div class="label"><Flag size={16} /> Priority</div>
+                <div class="priority-options">
+                    {#each ['High', 'Medium', 'Low'] as p}
+                        <button
+                            class="p-btn {p} {priority === p ? 'active' : ''}"
+                            on:click={() => priority = p}
+                        >
+                            {p}
+                        </button>
+                    {/each}
+                </div>
+            </div>
+            <div class="meta-col right">
+                <div class="label"><Clock size={16} /> Est. Time</div>
+                <div class="time-field">
+                    <input
+                        type="number"
+                        class="time-input"
+                        value={timeRaw}
+                        placeholder={String(originalMinutes)}
+                        min="1"
+                        max="999"
+                        on:input={onTimeInput}
+                        on:blur={onTimeBlur}
+                    />
+                    <span class="time-unit">min</span>
+                </div>
             </div>
         </div>
 
@@ -209,4 +244,23 @@
     }
     .btn-save:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
     .btn-save:active { transform: translateY(0); }
+
+    /* PRIORITY + TIME ROW */
+    .priority-time-meta { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; }
+    .meta-col { display: flex; flex-direction: column; }
+    .meta-col.right { align-items: flex-end; }
+    .time-field { display: flex; align-items: center; gap: 6px; }
+    .time-input {
+        width: 56px; text-align: center;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 10px; color: white; font-size: 1rem; font-weight: 600;
+        padding: 7px 8px; outline: none; transition: border-color 0.2s;
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+    .time-input::-webkit-inner-spin-button,
+    .time-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .time-input:focus { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); }
+    .time-input::placeholder { color: rgba(255,255,255,0.2); }
+    .time-unit { font-size: 0.85rem; color: rgba(255,255,255,0.45); font-weight: 600; }
 </style>
