@@ -142,19 +142,27 @@ export const loadTasks = async () => {
         if (error) throw error;
 
         if (data) {
-            // Map database columns (snake_case) to your app model (camelCase)
-            const mappedTasks = data.map(t => ({
-                id: t.id,
-                title: t.title,
-                description: t.description,
-                status: t.status,
-                priority: t.priority,
-                estTime: t.est_time,
-                timeSpent: t.time_spent,
-                createdAt: t.created_at,
-                completedAt: t.completed_at,
-                position: t.position ?? 0 // Include position
-            }));
+            // Preserve any locally-tracked timeSpent that's higher than the DB value.
+            // This prevents a mid-session loadTasks() call (e.g. from a Supabase token
+            // refresh triggering the $user reactive statement) from wiping in-progress
+            // timer data that hasn't been flushed to the server yet.
+            const localTasks = get(tasks);
+
+            const mappedTasks = data.map(t => {
+                const local = localTasks.find(lt => lt.id === t.id);
+                return {
+                    id: t.id,
+                    title: t.title,
+                    description: t.description,
+                    status: t.status,
+                    priority: t.priority,
+                    estTime: t.est_time,
+                    timeSpent: Math.max(t.time_spent ?? 0, local?.timeSpent ?? 0),
+                    createdAt: t.created_at,
+                    completedAt: t.completed_at,
+                    position: t.position ?? 0
+                };
+            });
 
             tasks.set(mappedTasks);
             syncStatus.set('idle');
@@ -455,17 +463,18 @@ export const deleteTask = async (id) => {
     }
 };
 
-export const updateTaskProgress = async (id, secondsToAdd) => {
-    let newTimeSpent = 0;
-    let taskFound = false;
+// Per-task debounce timers for Supabase progress writes.
+// Prevents concurrent write race conditions where an earlier (smaller) value
+// overwrites a later (larger) one if the first request is slow to complete.
+const progressWriteTimers = new Map();
 
-    // 1. Local Update
+export const updateTaskProgress = async (id, secondsToAdd) => {
+    // 1. Local Update (synchronous — always correct)
+    let taskFound = false;
     tasks.update(all => all.map(t => {
         if (t.id === id) {
             taskFound = true;
-            const oldTimeSpent = t.timeSpent;
-            newTimeSpent = oldTimeSpent + (secondsToAdd / 60);
-            return { ...t, timeSpent: newTimeSpent };
+            return { ...t, timeSpent: t.timeSpent + (secondsToAdd / 60) };
         }
         return t;
     }));
@@ -475,52 +484,56 @@ export const updateTaskProgress = async (id, secondsToAdd) => {
         return;
     }
 
-    // 2. Server Update
+    // 2. Debounced Server Update
+    // Cancels any pending write and reschedules. The write reads the latest store
+    // value at execution time, so even if many calls arrive quickly only one write
+    // goes out — with the correct cumulative total.
     const currentUser = get(user);
+    if (!currentUser) return;
 
-    if (currentUser) {
+    if (progressWriteTimers.has(id)) clearTimeout(progressWriteTimers.get(id));
+
+    progressWriteTimers.set(id, setTimeout(async () => {
+        progressWriteTimers.delete(id);
+
+        const latestTask = get(tasks).find(t => t.id === id);
+        if (!latestTask) return;
+
         const online = get(isOnline);
-
         if (!online) {
             addToSyncQueue({
                 id: crypto.randomUUID(),
                 type: 'update',
                 taskId: id,
-                data: { time_spent: newTimeSpent }
+                data: { time_spent: latestTask.timeSpent }
             });
             return;
         }
 
         try {
             const { error } = await supabase.from('tasks')
-                .update({ time_spent: newTimeSpent })
+                .update({ time_spent: latestTask.timeSpent })
                 .eq('id', id);
 
             if (error) {
                 console.error('Timer sync error:', error.message);
-
-                // Queue for retry
                 addToSyncQueue({
                     id: crypto.randomUUID(),
                     type: 'update',
                     taskId: id,
-                    data: { time_spent: newTimeSpent }
+                    data: { time_spent: latestTask.timeSpent }
                 });
-                addToast('Failed to sync timer progress', 'error');
-                return;
+            } else {
+                lastSyncTime.set(Date.now());
             }
-
-            lastSyncTime.set(Date.now());
-        } catch (error) {
-            console.error('Timer sync error:', error.message);
-
-            // Queue for retry
+        } catch (err) {
+            console.error('Timer sync error:', err.message);
             addToSyncQueue({
                 id: crypto.randomUUID(),
                 type: 'update',
                 taskId: id,
-                data: { time_spent: newTimeSpent }
+                data: { time_spent: latestTask.timeSpent }
             });
         }
-    }
+    }, 3000));
 };
