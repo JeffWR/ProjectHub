@@ -6,9 +6,11 @@ const defaultSettings = {
     shortBreak: 5,
     longBreak: 15,
     autoStart: false,
-    
-    // NEW: How many Pomodoros before a long break?
-    longBreakInterval: 4 
+    longBreakInterval: 4,
+
+    // Theme is localStorage-only — each device keeps its own preference.
+    // Valid values are keys of the `themes` object in src/lib/themes.js.
+    theme: 'pomodoro',
 };
 
 const initialSettings = browser && localStorage.getItem('settings')
