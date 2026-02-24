@@ -143,18 +143,17 @@
     /* 3. MAIN MODAL (Compact auto-height layout) */
     .modal-glass {
         width: 100%; max-width: 600px;
-        /* Let it grow naturally, but don't overflow screen */
-        height: auto; max-height: 85vh; 
-        overflow-y: auto; /* Scroll the modal itself if it gets too tall */
+        height: auto; max-height: 85vh;
+        overflow-y: auto;
 
-        background: rgba(30, 30, 30, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--surface-modal);
+        border: 1px solid var(--border-strong);
         border-radius: 24px;
         padding: 30px;
-        box-shadow: 0 40px 80px rgba(0,0,0,0.6);
-        
+        box-shadow: 0 40px 80px rgba(0,0,0,0.6), var(--shadow);
+
         display: flex; flex-direction: column; gap: 20px;
-        color: white; font-family: sans-serif;
+        color: var(--text-primary); font-family: sans-serif;
     }
     /* Hide scrollbar on the modal itself */
     .modal-glass::-webkit-scrollbar { display: none; }
@@ -163,42 +162,42 @@
     .modal-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
     .header-meta { display: flex; gap: 10px; }
     .date-badge, .id-badge {
-        font-size: 0.75rem; color: rgba(255,255,255,0.4);
-        background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 8px;
+        font-size: 0.75rem; color: var(--text-faint);
+        background: var(--surface); padding: 4px 10px; border-radius: 8px;
         display: flex; align-items: center; gap: 6px;
     }
     .close-btn {
-        background: transparent; border: none; color: rgba(255,255,255,0.4);
+        background: transparent; border: none; color: var(--text-faint);
         cursor: pointer; transition: 0.2s; padding: 5px; border-radius: 50%; display: flex;
     }
-    .close-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+    .close-btn:hover { background: var(--surface); color: var(--text-primary); }
 
     /* 5. TITLE */
     .title-input {
-        background: transparent; border: none; color: white;
+        background: transparent; border: none; color: var(--text-primary);
         font-size: 1.8rem; font-weight: 700; width: 100%;
         outline: none; padding: 5px 0;
         border-bottom: 2px solid transparent; transition: border-color 0.2s;
     }
-    .title-input:focus { border-bottom-color: rgba(255,255,255,0.2); }
-    .title-input::placeholder { color: rgba(255,255,255,0.2); }
+    .title-input:focus { border-bottom-color: var(--border-strong); }
+    .title-input::placeholder { color: var(--text-faint); }
 
     /* 6. META & PRIORITY */
-    .label { 
-        font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; 
-        color: rgba(255,255,255,0.5); font-weight: 700; display: flex; align-items: center; gap: 8px;
+    .label {
+        font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;
+        color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 8px;
         margin-bottom: 10px;
     }
     .priority-options { display: flex; gap: 10px; }
     .p-btn {
-        background: rgba(255,255,255,0.05); border: 1px solid transparent; 
-        color: rgba(255,255,255,0.6); padding: 8px 18px; border-radius: 12px;
+        background: var(--surface); border: 1px solid transparent;
+        color: var(--text-secondary); padding: 8px 18px; border-radius: 12px;
         font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
     }
     .p-btn.active.High { background: rgba(255, 118, 117, 0.2); color: #ff7675; border-color: #ff7675; }
     .p-btn.active.Medium { background: rgba(253, 203, 110, 0.2); color: #fdcb6e; border-color: #fdcb6e; }
     .p-btn.active.Low { background: rgba(85, 239, 196, 0.2); color: #55efc4; border-color: #55efc4; }
-    .p-btn:hover:not(.active) { background: rgba(255,255,255,0.1); color: white; }
+    .p-btn:hover:not(.active) { background: var(--surface-hover); color: var(--text-primary); }
 
     /* 7. DESCRIPTION (FIXED) */
     .description-section { 
@@ -207,8 +206,8 @@
     }
     
     .textarea-wrapper {
-        background: rgba(0,0,0,0.2); border-radius: 16px; 
-        border: 1px solid rgba(255,255,255,0.05);
+        background: var(--input-bg); border-radius: 16px;
+        border: 1px solid var(--border);
         /* Specific height so it feels like a big box */
         height: 300px; 
         display: flex; flex-direction: column;
@@ -216,12 +215,12 @@
     }
 
     textarea {
-        flex: 1; /* Fills the 300px wrapper */
-        width: 100%; height: 100%; 
+        flex: 1;
+        width: 100%; height: 100%;
         resize: none; border: none; background: transparent;
-        color: rgba(255,255,255,0.9); padding: 15px; 
+        color: var(--text-primary); padding: 15px;
         font-family: inherit; font-size: 1rem; line-height: 1.6;
-        overflow-y: auto; 
+        overflow-y: auto;
     }
     textarea:focus { outline: none; }
 
@@ -237,7 +236,7 @@
     .btn-delete:hover { background: rgba(255, 71, 87, 0.2); transform: scale(1.05); }
 
     .btn-save {
-        background: white; color: #ba4949; border: none;
+        background: white; color: var(--color-primary); border: none;
         padding: 0 40px; height: 50px; border-radius: 16px;
         font-weight: 800; font-size: 1rem; cursor: pointer;
         box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.1s;
@@ -252,15 +251,15 @@
     .time-field { display: flex; align-items: center; gap: 6px; }
     .time-input {
         width: 56px; text-align: center;
-        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 10px; color: white; font-size: 1rem; font-weight: 600;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 10px; color: var(--text-primary); font-size: 1rem; font-weight: 600;
         padding: 7px 8px; outline: none; transition: border-color 0.2s;
         -moz-appearance: textfield;
         appearance: textfield;
     }
     .time-input::-webkit-inner-spin-button,
     .time-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    .time-input:focus { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); }
-    .time-input::placeholder { color: rgba(255,255,255,0.2); }
+    .time-input:focus { border-color: var(--border-strong); background: var(--surface-hover); }
+    .time-input::placeholder { color: var(--text-faint); }
     .time-unit { font-size: 0.85rem; color: rgba(255,255,255,0.45); font-weight: 600; }
 </style>

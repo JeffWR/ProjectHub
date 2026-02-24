@@ -218,7 +218,7 @@
         height: calc(100vh - 100px);
         max-width: 1400px; margin: 0 auto;
         display: flex; flex-direction: column;
-        color: #eee; overflow: hidden;
+        color: var(--text-primary); overflow: hidden;
         padding: 10px 0;
     }
 

@@ -154,11 +154,11 @@
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(255, 255, 255, 0.15);
+        background: var(--surface-hover);
         padding: 6px;
         border-radius: 50px;
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border);
     }
 
     .nav-links-wrapper {
@@ -173,6 +173,7 @@
         transform: translateY(-50%);
         height: 44px;
         background: white;
+        border: 1px solid var(--border-strong);
         border-radius: 40px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -180,7 +181,7 @@
     }
 
     a {
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--text-secondary);
         text-decoration: none;
         padding: 10px 24px;
         border-radius: 40px;
@@ -194,10 +195,10 @@
         z-index: 1;
     }
 
-    a:hover { color: white; }
+    a:hover { color: var(--text-primary); }
 
     a.active {
-        color: #ba4949;
+        color: var(--color-primary);
         font-weight: 600;
     }
 
@@ -210,10 +211,10 @@
     .nav-right { z-index: 10; }
 
     .profile-btn {
-        background: rgba(0,0,0,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
-        color: white;
-        padding: 6px 6px 6px 16px; 
+        background: var(--surface);
+        border: 1px solid var(--border-strong);
+        color: var(--text-primary);
+        padding: 6px 6px 6px 16px;
         border-radius: 30px;
         cursor: pointer;
         font-family: 'Poppins', sans-serif;
@@ -225,15 +226,15 @@
     }
     
     .profile-btn:hover {
-        background: rgba(255,255,255,0.1);
-        border-color: rgba(255,255,255,0.4);
+        background: var(--surface-hover);
+        border-color: var(--border-strong);
     }
 
     .user-name { font-size: 0.9rem; }
 
     .avatar-circle {
         width: 32px; height: 32px;
-        background: white; color: #ba4949;
+        background: white; color: var(--color-primary);
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         font-weight: 700; /* Added so the initial letter looks bold */

@@ -91,11 +91,12 @@
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: var(--surface);
+        border: 1px solid var(--border-strong);
         border-radius: 20px;
         font-size: 0.85rem;
         backdrop-filter: blur(10px);
+        box-shadow: var(--shadow);
     }
 
     .sync-status.clickable {
@@ -103,7 +104,7 @@
     }
 
     .sync-status.clickable:hover {
-        background: rgba(255, 255, 255, 0.15);
+        background: var(--surface-hover);
     }
 
     .status-text {
@@ -111,7 +112,7 @@
     }
 
     .time-ago {
-        color: rgba(255, 255, 255, 0.6);
+        color: var(--text-muted);
         font-size: 0.8rem;
     }
 

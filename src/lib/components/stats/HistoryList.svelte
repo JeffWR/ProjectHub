@@ -141,7 +141,7 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        color: rgba(255, 255, 255, 0.9);
+        color: var(--text-primary);
     }
 
     .expand-btn {

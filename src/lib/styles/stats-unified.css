@@ -4,10 +4,11 @@
 
 /* --- CONTAINERS --- */
 .stat-box {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 16px;
     padding: 16px;
+    box-shadow: var(--shadow);
 }
 
 /* --- TYPOGRAPHY --- */
@@ -15,7 +16,7 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--text-primary);
 }
 
 /* Headers */
@@ -29,7 +30,7 @@
 /* Labels */
 .stat-label {
     font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -38,13 +39,13 @@
 .stat-value {
     font-size: 0.85rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--text-primary);
 }
 
 /* Meta text (secondary info) */
 .stat-meta {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-muted);
 }
 
 /* --- BADGES --- */
@@ -86,7 +87,7 @@
 
 .chart-labels-top span {
     font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-muted);
     text-transform: uppercase;
 }
 
@@ -95,13 +96,13 @@
     gap: 12px;
     align-items: center;
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-muted);
 }
 
 /* --- DIVIDERS --- */
 .stat-divider {
     height: 1px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--border);
     margin: 12px 0;
 }
 
@@ -111,7 +112,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border);
 }
 
 .stat-list-row:last-child {
@@ -120,9 +121,9 @@
 
 /* --- BUTTONS --- */
 .stat-button {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.8);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
@@ -132,8 +133,8 @@
 }
 
 .stat-button:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 1);
+    background: var(--surface-hover);
+    color: var(--text-primary);
 }
 
 /* --- SPACING UTILITIES --- */
@@ -151,7 +152,7 @@
 
 /* --- EMPTY STATES --- */
 .stat-empty {
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--text-faint);
     font-style: italic;
     text-align: center;
     padding: 24px;

@@ -437,9 +437,9 @@
 
     /* SECTIONS */
     .section {
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--surface);
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border);
         border-radius: 24px;
         padding: 20px;
         display: flex;
@@ -447,9 +447,10 @@
         overflow: hidden;
         min-height: 0;
         min-width: 0;
-        transition: background 0.2s;
+        box-shadow: var(--shadow);
+        transition: background 0.2s, box-shadow 0.2s;
     }
-    .section:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); }
+    .section:hover { background: var(--surface-hover); border-color: var(--border-strong); }
 
     .list-section, .col-mid, .review-section { flex: 1; min-height: 0; }
 
@@ -481,25 +482,25 @@
     /* --- HEADERS & BUTTONS --- */
     .create-section { flex: 0 0 auto; }
     .big-create-btn {
-        width: 100%; height: 100px; background: white; color: #ba4949;
-        border: none; border-radius: 24px; display: flex; align-items: center; gap: 20px; padding: 0 30px;
+        width: 100%; height: 100px; background: var(--surface); color: var(--text-primary);
+        border: 1px solid var(--border); border-radius: 24px; display: flex; align-items: center; gap: 20px; padding: 0 30px;
         font-family: 'Poppins', sans-serif; font-size: 1.2rem; font-weight: 700;
-        cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        cursor: pointer; box-shadow: var(--shadow);
         transition: 0.2s;
     }
     .big-create-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(0,0,0,0.15); }
-    .icon-circle { background: #ba4949; color: white; padding: 10px; border-radius: 50%; display: flex; }
+    .icon-circle { background: var(--color-primary); color: white; padding: 10px; border-radius: 50%; display: flex; }
 
     .header { display: flex; justify-content: space-between; margin-bottom: 15px; flex-shrink: 0; }
-    .header h3 { margin: 0; font-size: 1.1rem; color: rgba(255,255,255,0.9); }
-    .header.highlight h3 { color: white; font-size: 1.4rem; font-weight: 700; }
-    .badge { background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
-    .empty-placeholder { text-align: center; opacity: 0.5; margin-top: 50px; color: white; }
+    .header h3 { margin: 0; font-size: 1.1rem; color: var(--text-secondary); }
+    .header.highlight h3 { color: var(--text-primary); font-size: 1.4rem; font-weight: 700; }
+    .badge { background: var(--surface); border: 1px solid var(--border); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; color: var(--text-secondary); }
+    .empty-placeholder { text-align: center; opacity: 0.5; margin-top: 50px; color: var(--text-primary); }
 
-    .history-link-section { flex: 0 0 100px; padding: 0; background: rgba(0,0,0,0.2); border: none; }
+    .history-link-section { flex: 0 0 100px; padding: 0; background: var(--surface); border: 1px solid var(--border); }
     .history-card {
         display: flex; align-items: center; gap: 15px; width: 100%; height: 100%;
-        text-decoration: none; color: white; padding: 0 25px; box-sizing: border-box;
+        text-decoration: none; color: var(--text-primary); padding: 0 25px; box-sizing: border-box;
     }
 
     /* --- TRELLO-STYLE DRAG & DROP EFFECTS --- */

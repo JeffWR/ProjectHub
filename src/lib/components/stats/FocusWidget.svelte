@@ -92,7 +92,7 @@
     }
 
     .dot.empty {
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--surface-hover);
     }
 
     .dot-val {

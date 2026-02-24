@@ -222,16 +222,17 @@
 <style>
     /* --- GLASS PANEL (DASHBOARD) --- */
     .glass-panel {
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--surface);
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border);
         border-radius: 30px;
         width: 100%; max-width: 600px;
         aspect-ratio: 4/3;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center;
+        box-shadow: var(--shadow);
         transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
-        opacity: 1 !important; 
+        opacity: 1 !important;
     }
     
     .glass-panel.dimmed { 
@@ -262,7 +263,7 @@
     .timer-digits {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         font-weight: 700;
-        color: white;
+        color: var(--text-primary);
         line-height: 1;
         font-variant-numeric: tabular-nums;
         font-feature-settings: "tnum";
@@ -301,19 +302,19 @@
     /* --- UTILS --- */
     .hidden { display: none; }
     
-    .task-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; max-width: 90%; }
+    .task-pill { background: var(--surface); border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; max-width: 90%; }
     .task-title { display: inline-block; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
     .active-dot { color: #4caf50; font-size: 0.8rem; }
     .inactive { opacity: 0.6; font-style: italic; }
     
     .controls { display: flex; gap: 15px; margin-bottom: 40px; }
     
-    .btn-main { background: white; color: #ba4949; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #e0e0e0; transition: transform 0.1s; }
-    
-    .modes { display: flex; gap: 10px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 12px; }
-    .modes button { background: transparent; border: none; color: rgba(255,255,255,0.6); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-    .modes button.active { background: rgba(255,255,255,0.2); color: white; }
-    .cycle-info { margin-top: 20px; font-size: 0.85rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
+    .btn-main { background: var(--text-primary); color: var(--color-primary); border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.15); transition: transform 0.1s; }
+
+    .modes { display: flex; gap: 10px; background: var(--surface); border: 1px solid var(--border); padding: 5px; border-radius: 12px; }
+    .modes button { background: transparent; border: none; color: var(--text-muted); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .modes button.active { background: var(--surface-hover); color: var(--text-primary); }
+    .cycle-info { margin-top: 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
     @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     .shaking .big-time { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; color: #ff4757; }

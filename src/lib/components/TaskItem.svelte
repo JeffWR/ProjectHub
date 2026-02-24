@@ -28,7 +28,7 @@
 
         {#if isHero}
             <div class="hero-label">
-                <PlayCircle size={14} fill="#ba4949" color="white" />
+                <PlayCircle size={14} fill="var(--color-primary)" color="white" />
                 <span>Timer Active</span>
             </div>
         {/if}
@@ -64,7 +64,7 @@
                 <span>{Math.floor(task.timeSpent)}/{task.estTime}m</span>
             </div>
             <div class="progress-track">
-                <div class="progress-fill" style="width: {progressPct}%; background: {isHero ? '#ba4949' : 'var(--priority-color)'}"></div>
+                <div class="progress-fill" style="width: {progressPct}%; background: {isHero ? 'var(--color-primary)' : 'var(--priority-color)'}"></div>
             </div>
         </div>
     {/if}

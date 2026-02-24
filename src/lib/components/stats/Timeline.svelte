@@ -97,15 +97,15 @@
         justify-content: space-between;
         align-items: center;
         padding: 16px;
-        background: rgba(0, 0, 0, 0.2);
+        background: var(--surface);
         z-index: 2;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid var(--border);
     }
 
     .nav-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        color: rgba(255, 255, 255, 0.8);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
         padding: 8px;
         border-radius: 8px;
         cursor: pointer;
@@ -116,8 +116,8 @@
     }
 
     .nav-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: white;
+        background: var(--surface-hover);
+        color: var(--text-primary);
     }
 
     .date-display {
@@ -171,7 +171,7 @@
 
     .grid-line {
         flex: 1;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        border-top: 1px solid var(--border);
         height: 100%;
         transform-origin: left center;
         transform: scaleX(0);
