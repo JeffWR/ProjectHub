@@ -5,6 +5,8 @@
     import { supabase } from '$lib/supabase';
     import { user } from '$lib/stores/auth';
     import { addToast } from '$lib/stores/toast';
+    import { settings } from '$lib/stores/settings';
+    import { themes, themeLabels } from '$lib/themes';
 
     const dispatch = createEventDispatcher();
 
@@ -133,7 +135,7 @@
                 <div class="user-info">
                     <h3>My Account</h3>
                     <span class="email">{$user.email}</span>
-                    <span class="badge free">Free Plan</span> 
+                    <span class="badge free">Free Plan</span>
                 </div>
             </div>
 
@@ -145,12 +147,7 @@
                 <button class="btn-upgrade">Upgrade to Pro ($5/mo)</button>
             </div>
 
-            <div class="modal-footer">
-                <button class="btn-signout" on:click={handleSignOut} disabled={loading}>
-                    {#if loading}<Loader2 size={16} class="spin"/>{:else}<LogOut size={16} />{/if}
-                    Sign Out
-                </button>
-            </div>
+            <div class="divider"></div>
 
         {:else}
             <div class="login-container">
@@ -210,6 +207,33 @@
                 {/if}
             </div>
         {/if}
+
+        <!-- Theme picker — always visible regardless of login state -->
+        <div class="section">
+            <h3>Theme</h3>
+            <div class="theme-options">
+                {#each Object.keys(themes) as key}
+                    <button
+                        class="theme-btn {$settings.theme === key ? 'active' : ''}"
+                        on:click={() => settings.update(s => ({ ...s, theme: key }))}
+                        title={themeLabels[key]}
+                    >
+                        <div class="theme-swatch" style="background: {themes[key]['--bg-gradient']}"></div>
+                        <span>{themeLabels[key]}</span>
+                    </button>
+                {/each}
+            </div>
+        </div>
+
+        {#if $user}
+            <div class="modal-footer">
+                <button class="btn-signout" on:click={handleSignOut} disabled={loading}>
+                    {#if loading}<Loader2 size={16} class="spin"/>{:else}<LogOut size={16} />{/if}
+                    Sign Out
+                </button>
+            </div>
+        {/if}
+
     </div>
 </div>
 
