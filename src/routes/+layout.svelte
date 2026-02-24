@@ -4,12 +4,12 @@
     import Toast from '$lib/components/Toast.svelte';
     import SettingsModal from '$lib/components/SettingsModal.svelte';
     import SyncStatus from '$lib/components/SyncStatus.svelte';
-
-    // --- NEW IMPORTS FOR CLOUD SYNC ---
+    import { browser } from '$app/environment';
     import { onMount } from 'svelte';
     import { user } from '$lib/stores/auth';
     import { loadTasks } from '$lib/stores/tasks';
-    // ----------------------------------
+    import { settings } from '$lib/stores/settings';
+    import { themes } from '$lib/themes';
 
     let showSettings = false;
 
@@ -25,6 +25,16 @@
         loadTasks();
     }
     // --------------------------
+
+    // --- THEME APPLICATION ---
+    // Runs whenever settings.theme changes. Sets CSS custom properties on <html>
+    // so every component can consume them via var(--...).
+    $: if (browser) {
+        const t = themes[$settings.theme] ?? themes.pomodoro;
+        Object.entries(t).forEach(([key, val]) => {
+            document.documentElement.style.setProperty(key, val);
+        });
+    }
 
     // --- SLIDING INDICATOR LOGIC ---
     let navLinks = {};
@@ -99,12 +109,28 @@
 </div>
 
 <style>
-    /* PRESERVED EXACTLY AS PROVIDED */
+    /* CSS VARIABLE DEFAULTS (pomodoro theme — overridden by JS on load) */
+    :global(:root) {
+        --bg-gradient:    linear-gradient(135deg, #ba4949 0%, #d65a5a 100%);
+        --color-primary:  #ba4949;
+        --color-primary-2:#d65a5a;
+        --text-primary:   #ffffff;
+        --text-secondary: rgba(255,255,255,0.7);
+        --text-muted:     rgba(255,255,255,0.5);
+        --text-faint:     rgba(255,255,255,0.4);
+        --surface:        rgba(255,255,255,0.1);
+        --surface-hover:  rgba(255,255,255,0.15);
+        --surface-modal:  rgba(30,30,30,0.95);
+        --border:         rgba(255,255,255,0.1);
+        --border-strong:  rgba(255,255,255,0.2);
+        --input-bg:       rgba(0,0,0,0.2);
+    }
+
     :global(body) {
         margin: 0;
         font-family: 'Poppins', sans-serif;
-        background: linear-gradient(135deg, #ba4949 0%, #d65a5a 100%);
-        color: white;
+        background: var(--bg-gradient);
+        color: var(--text-primary);
         height: 100vh;
         overflow: hidden;
     }
