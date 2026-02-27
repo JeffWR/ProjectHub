@@ -15,7 +15,9 @@ function createTimer() {
         isRunning: false,
         mode: 'pomodoro',
         settings: defaultSettings,
-        lastTick: null // NEW: Tracks the exact time of the last update
+        lastTick: null,
+        startedAt: null,    // Timestamp (ms) when timer was first started for this session
+        completedAt: null   // Timestamp (ms) when timer hit 0
     };
 
     // Load from LocalStorage if available
@@ -116,7 +118,8 @@ function createTimer() {
                     ...state,
                     isRunning: false,
                     timeLeft: 0,
-                    lastTick: null
+                    lastTick: null,
+                    completedAt: now // Record exact moment the timer hit 0
                 };
             }
 
@@ -148,7 +151,12 @@ function createTimer() {
         // Mark the start time immediately so the first tick is accurate
         update(s => {
             console.log(`start() update - timeLeft before: ${s.timeLeft}`);
-            return { ...s, isRunning: true, lastTick: Date.now() };
+            return {
+                ...s,
+                isRunning: true,
+                lastTick: Date.now(),
+                startedAt: s.startedAt || Date.now() // Preserve original start on resume
+            };
         });
 
         if (interval) clearInterval(interval);
@@ -171,10 +179,12 @@ function createTimer() {
 
     const reset = () => {
         pause();
-        update(s => ({ 
-            ...s, 
+        update(s => ({
+            ...s,
             timeLeft: s.settings[s.mode] * 60,
-            lastTick: null 
+            lastTick: null,
+            startedAt: null,
+            completedAt: null
         }));
     };
 
@@ -183,7 +193,9 @@ function createTimer() {
         update(s => ({
             ...s,
             mode,
-            timeLeft: s.settings[mode] * 60
+            timeLeft: s.settings[mode] * 60,
+            startedAt: null,
+            completedAt: null
         }));
     };
 
@@ -225,7 +237,9 @@ function createTimer() {
                 short: mode === 'short' ? safeMinutes : currentState.settings.short,
                 long: mode === 'long' ? safeMinutes : currentState.settings.long
             },
-            lastTick: null
+            lastTick: null,
+            startedAt: null,
+            completedAt: null
         };
 
         console.log(`setModeWithDuration AFTER - setting new state:`, newState);
