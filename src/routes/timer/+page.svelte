@@ -117,95 +117,92 @@
 </script>
 
 {#if hydrated}
-<div class="glass-panel" class:dimmed={$timer.isRunning || isEditing || showCompleteModal} in:fly={{ y: 20, duration: 400 }}>
-    <div class="task-pill">
-        {#if activeTask}
-            <span class="active-dot">●</span> Working on: <strong class="task-title">{activeTask.title}</strong>
-        {:else}
-            <span class="inactive">Drag a task to "In Focus" to start</span>
-        {/if}
-    </div>
+<div
+    class="glass-panel"
+    class:dimmed={isEditing || showCompleteModal}
+    class:running={$timer.isRunning}
+    on:mousedown={$timer.isRunning ? startHold : null}
+    on:mouseup={cancelHold}
+    on:mouseleave={cancelHold}
+    on:touchstart|preventDefault={$timer.isRunning ? startHold : null}
+    on:touchend={cancelHold}
+    on:contextmenu|preventDefault
+    in:fly={{ y: 20, duration: 400 }}
+>
+    {#if $timer.isRunning}
+        <div class="focus-task" in:fly={{ y: -20, duration: 600, delay: 100 }}>
+            {#if activeTask}
+                <span class="focus-task-title">{activeTask.title}</span>
+            {:else}
+                Focus Mode
+            {/if}
+        </div>
 
-    {#if !$timer.isRunning && !isEditing}
-        <h1
-            class="timer-digits dashboard-timer"
-            on:click={startEditing}
-            in:receive={{ key: 'timer-move' }}
-            out:send={{ key: 'timer-move' }}
-            title="Click to edit"
-        >
-            {displayTime}
-        </h1>
-    {:else}
-         <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
-    {/if}
+        <div class="timer-wrapper" class:shaking={isHolding && holdProgress > 85}>
+            <svg class="progress-ring" width="300" height="300" viewBox="0 0 500 500" style="opacity: {isHolding ? 1 : 0}">
+                <circle
+                    stroke="#ff4757" stroke-width="4" fill="transparent"
+                    r={RADIUS} cx="250" cy="250"
+                    stroke-dasharray={CIRCUMFERENCE}
+                    stroke-dashoffset={strokeDashoffset}
+                    class="progress-ring__circle"
+                />
+            </svg>
 
-    <div class="controls" class:hidden={$timer.isRunning}>
-        <button class="btn-main" on:click={timer.start}>START</button>
-    </div>
-
-    <div class="modes" class:hidden={$timer.isRunning}>
-        <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
-        <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
-        <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
-    </div>
-
-    <div class="cycle-info">
-        Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
-    </div>
-</div>
-{/if}
-
-{#if $timer.isRunning}
-    <div 
-        class="focus-overlay-container"
-        on:mousedown={startHold} 
-        on:mouseup={cancelHold} 
-        on:mouseleave={cancelHold}
-        on:touchstart|preventDefault={startHold}
-        on:touchend={cancelHold}
-        on:contextmenu|preventDefault
-    >
-        <div class="focus-background" transition:growWithGradient={{ duration: 1200 }}></div>
-
-        <div class="focus-content">
-            <div class="focus-task" in:fly={{ y: -20, duration: 1200, delay: 300 }}>
-                {#if activeTask}
-                    <span class="focus-task-title">{activeTask.title}</span>
-                {:else}
-                    Focus Mode
-                {/if}
-            </div>
-
-            <div class="timer-wrapper" class:shaking={isHolding && holdProgress > 85}>
-                <svg class="progress-ring" width="500" height="500" style="opacity: {isHolding ? 1 : 0}">
-                    <circle 
-                        stroke="#ff4757" stroke-width="4" fill="transparent"
-                        r={RADIUS} cx="250" cy="250"
-                        stroke-dasharray={CIRCUMFERENCE}
-                        stroke-dashoffset={strokeDashoffset}
-                        class="progress-ring__circle"
-                    />
-                </svg>
-                
-                <div 
-                    class="big-time" 
-                    in:receive={{ key: 'timer-move' }} 
-                    out:send={{ key: 'timer-move' }}
-                >
-                    {displayTime}
-                </div>
-            </div>
-
-            <div class="instruction">
-                {#if isHolding}
-                    <span class="text-danger">Keep holding to stop...</span>
-                {:else}
-                    <span class="text-muted">Hold to Stop</span>
-                {/if}
+            <div
+                class="big-time"
+                in:receive={{ key: 'timer-move' }}
+                out:send={{ key: 'timer-move' }}
+            >
+                {displayTime}
             </div>
         </div>
-    </div>
+
+        <div class="instruction">
+            {#if isHolding}
+                <span class="text-danger">Keep holding to stop...</span>
+            {:else}
+                <span class="text-muted">Hold to Stop</span>
+            {/if}
+        </div>
+    {:else}
+        <div class="task-pill">
+            {#if activeTask}
+                <span class="active-dot">●</span> Working on: <strong class="task-title">{activeTask.title}</strong>
+            {:else}
+                <span class="inactive">Drag a task to "In Focus" to start</span>
+            {/if}
+        </div>
+
+        {#if !isEditing}
+            <h1
+                class="timer-digits dashboard-timer"
+                on:click={startEditing}
+                in:receive={{ key: 'timer-move' }}
+                out:send={{ key: 'timer-move' }}
+                title="Click to edit"
+            >
+                {displayTime}
+            </h1>
+        {:else}
+            <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
+        {/if}
+
+        <div class="controls">
+            <button class="btn-main" on:click={timer.start}>START</button>
+        </div>
+
+        <div class="modes">
+            <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
+            <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
+            <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
+        </div>
+
+        <div class="cycle-info">
+            Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
+        </div>
+    {/if}
+</div>
 {/if}
 
 {#if isEditing}
@@ -235,28 +232,14 @@
         opacity: 1 !important;
     }
     
-    .glass-panel.dimmed { 
-        pointer-events: none; 
+    .glass-panel.dimmed {
+        pointer-events: none;
         transform: scale(0.98);
     }
 
-    /* --- FOCUS MODE BACKGROUND --- */
-    .focus-overlay-container {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        z-index: 9999;
-        display: flex; justify-content: center; align-items: center;
+    .glass-panel.running {
         cursor: pointer;
-    }
-    
-    .focus-background {
-        position: absolute; 
-        top: 50%; left: 50%;
-        width: 100vmin; height: 100vmin; 
-        margin-left: -50vmin; margin-top: -50vmin;
-        border-radius: 50%;
-        background: radial-gradient(closest-side, #000 0%, #050505 50%, transparent 100%);
-        z-index: 9998;
-        transform: scale(4); 
+        gap: 20px;
     }
 
     /* --- TYPOGRAPHY --- */
@@ -276,27 +259,21 @@
     .big-time {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         font-weight: 800;
-        font-size: 9rem;
-        color: white;
+        font-size: 7rem;
+        color: var(--text-primary);
         line-height: 1;
         font-variant-numeric: tabular-nums;
         font-feature-settings: "tnum";
         letter-spacing: -3px;
         pointer-events: none;
-        z-index: 10001;
     }
 
-    .focus-content {
-        position: relative; z-index: 10000;
-        display: flex; flex-direction: column; align-items: center; gap: 40px;
-        transform: translateY(-20px);
-    }
-    .focus-task { font-size: 1.5rem; color: rgba(255,255,255,0.6); font-weight: 500; letter-spacing: 0.5px; max-width: 80vw; text-align: center; }
+    .focus-task { font-size: 1rem; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.5px; max-width: 90%; text-align: center; }
     .focus-task-title { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .timer-wrapper { position: relative; width: 500px; height: 500px; display: flex; align-items: center; justify-content: center; }
+    .timer-wrapper { position: relative; width: 300px; height: 300px; display: flex; align-items: center; justify-content: center; }
     .progress-ring { position: absolute; top: 0; left: 0; transform: rotate(-90deg); pointer-events: none; transition: opacity 0.3s ease; }
     .progress-ring__circle { transition: stroke-dashoffset 0.05s linear; stroke-linecap: round; }
-    .instruction { height: 24px; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; pointer-events: none; margin-top: -30px; opacity: 0.5; color: white;}
+    .instruction { height: 24px; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; pointer-events: none; opacity: 0.5; color: var(--text-muted); }
     .text-danger { color: #ff4757; animation: pulse 1s infinite; opacity: 1; }
 
     /* --- UTILS --- */
