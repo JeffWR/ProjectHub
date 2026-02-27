@@ -14,10 +14,14 @@ export async function handleTimerCompletion(heroTask, completedTodayCount) {
 
     // 1. If Pomodoro finished, log it, reset, and request Modal
     if (currentMode === 'pomodoro') {
+        // Read timestamps before reset clears them
+        const timerState = get(timer);
         logSession(
             currentSettings?.pomodoro || 25,
             heroTask?.id,
-            heroTask?.title || 'Focus'
+            heroTask?.title || 'Focus',
+            timerState.completedAt,  // Exact moment timer hit 0
+            timerState.startedAt     // Exact moment timer was first started
         );
         timer.reset(); // Reset pomodoro timer for next session
         return { shouldShowModal: true };

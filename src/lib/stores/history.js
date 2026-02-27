@@ -14,11 +14,13 @@ if (browser) {
 }
 
 // Action: Log a completed session
-export const logSession = (durationMinutes, taskId, taskTitle) => {
+// endTime and startedAt are timestamps in ms (from timer store) for accuracy
+export const logSession = (durationMinutes, taskId, taskTitle, endTime, startedAt) => {
     history.update(all => {
         const newLog = {
             id: Date.now(),
-            date: new Date().toISOString(), // Full timestamp
+            date: endTime ? new Date(endTime).toISOString() : new Date().toISOString(),
+            startedAt: startedAt ? new Date(startedAt).toISOString() : null,
             duration: durationMinutes,
             taskId,
             taskTitle
