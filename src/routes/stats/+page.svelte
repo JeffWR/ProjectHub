@@ -56,7 +56,11 @@
             const endD = safeDate(session.date);
             if (!endD) return null;
             const duration = session.duration || 25;
-            const startD = new Date(endD.getTime() - duration * 60000);
+            // Use recorded startedAt if available; fall back to computing from end - duration
+            const startD = session.startedAt
+                ? safeDate(session.startedAt)
+                : new Date(endD.getTime() - duration * 60000);
+            if (!startD) return null;
             const startMinutes = (startD.getHours() * 60) + startD.getMinutes();
             const timeRange = `${startD.getHours()}:${startD.getMinutes().toString().padStart(2,'0')} - ${endD.getHours()}:${endD.getMinutes().toString().padStart(2,'0')}`;
 
