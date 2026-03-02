@@ -148,43 +148,22 @@
 <div
     class="glass-panel"
     class:dimmed={isEditing || showCompleteModal}
-    class:running={$timer.isRunning}
-    on:mousedown={$timer.isRunning ? startHold : null}
+    class:running={$timer.isRunning && $timer.mode !== 'pomodoro'}
+    on:mousedown={$timer.isRunning && $timer.mode !== 'pomodoro' ? startHold : null}
     on:mouseup={cancelHold}
     on:mouseleave={cancelHold}
-    on:touchstart|preventDefault={$timer.isRunning ? startHold : null}
+    on:touchstart|preventDefault={$timer.isRunning && $timer.mode !== 'pomodoro' ? startHold : null}
     on:touchend={cancelHold}
     on:contextmenu|preventDefault
     in:fly={{ y: 20, duration: 400 }}
 >
-    {#if $timer.isRunning}
-        <div class="focus-task" in:fly={{ y: -20, duration: 600, delay: 100 }}>
-            {#if activeTask}
-                <span class="focus-task-title">{activeTask.title}</span>
-            {:else}
-                Focus Mode
-            {/if}
+    {#if $timer.isRunning && $timer.mode !== 'pomodoro'}
+        <!-- ── BREAK RUNNING: dashboard view with countdown ── -->
+        <div class="task-pill">
+            <span class="break-dot">●</span> On break
         </div>
 
-        <div class="timer-wrapper" class:shaking={isHolding && holdProgress > 85}>
-            <svg class="progress-ring" width="300" height="300" viewBox="0 0 500 500" style="opacity: {isHolding ? 1 : 0}">
-                <circle
-                    stroke="#ff4757" stroke-width="4" fill="transparent"
-                    r={RADIUS} cx="250" cy="250"
-                    stroke-dasharray={CIRCUMFERENCE}
-                    stroke-dashoffset={strokeDashoffset}
-                    class="progress-ring__circle"
-                />
-            </svg>
-
-            <div
-                class="big-time"
-                in:receive={{ key: 'timer-move' }}
-                out:send={{ key: 'timer-move' }}
-            >
-                {displayTime}
-            </div>
-        </div>
+        <h1 class="timer-digits dashboard-timer">{displayTime}</h1>
 
         <div class="instruction">
             {#if isHolding}
@@ -193,7 +172,9 @@
                 <span class="text-muted">Hold to Stop</span>
             {/if}
         </div>
+
     {:else}
+        <!-- ── STOPPED: full dashboard ── -->
         <div class="task-pill">
             {#if activeTask}
                 <span class="active-dot">●</span> Working on: <strong class="task-title">{activeTask.title}</strong>
@@ -206,8 +187,6 @@
             <h1
                 class="timer-digits dashboard-timer"
                 on:click={startEditing}
-                in:receive={{ key: 'timer-move' }}
-                out:send={{ key: 'timer-move' }}
                 title="Click to edit"
             >
                 {displayTime}
@@ -284,23 +263,6 @@
     .dashboard-timer { font-size: 7rem; margin: 10px 0 30px 0; cursor: pointer; }
     .dashboard-timer:hover { transform: scale(1.02); }
 
-    .big-time {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        font-weight: 800;
-        font-size: 7rem;
-        color: var(--text-primary);
-        line-height: 1;
-        font-variant-numeric: tabular-nums;
-        font-feature-settings: "tnum";
-        letter-spacing: -3px;
-        pointer-events: none;
-    }
-
-    .focus-task { font-size: 1rem; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.5px; max-width: 90%; text-align: center; }
-    .focus-task-title { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .timer-wrapper { position: relative; width: 300px; height: 300px; display: flex; align-items: center; justify-content: center; }
-    .progress-ring { position: absolute; top: 0; left: 0; transform: rotate(-90deg); pointer-events: none; transition: opacity 0.3s ease; }
-    .progress-ring__circle { transition: stroke-dashoffset 0.05s linear; stroke-linecap: round; }
     .instruction { height: 24px; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; pointer-events: none; opacity: 0.5; color: var(--text-muted); }
     .text-danger { color: #ff4757; animation: pulse 1s infinite; opacity: 1; }
 
@@ -310,6 +272,7 @@
     .task-pill { background: var(--surface); border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; max-width: 90%; }
     .task-title { display: inline-block; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
     .active-dot { color: #4caf50; font-size: 0.8rem; }
+    .break-dot { color: #3b9ede; font-size: 0.8rem; }
     .inactive { opacity: 0.6; font-style: italic; }
     
     .controls { display: flex; gap: 15px; margin-bottom: 40px; }
