@@ -6,8 +6,36 @@
     import { settings } from '$lib/stores/settings';
     import { history } from '$lib/stores/history';
     import { fly } from 'svelte/transition';
+    import { cubicOut } from 'svelte/easing';
 
     import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js';
+
+    function immerse(node, { duration = 850 } = {}) {
+        return {
+            duration,
+            css: (t) => {
+                const e = cubicOut(t);
+                return `
+                    opacity: ${e};
+                    transform: scale(${1.05 - 0.05 * e});
+                `;
+            }
+        };
+    }
+
+    function emerge(node, { duration = 500 } = {}) {
+        return {
+            duration,
+            css: (t) => {
+                const e = cubicOut(t);
+                // t goes 1→0 on exit, so invert it
+                return `
+                    opacity: ${e};
+                    transform: scale(${1.0 + 0.05 * (1 - e)});
+                `;
+            }
+        };
+    }
     import { handleTimerCompletion, advancePhase, applyMode } from '$lib/components/timer/TimerLogic';
 
     import TimerCompleteModal from '$lib/components/TimerCompleteModal.svelte';
