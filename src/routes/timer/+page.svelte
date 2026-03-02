@@ -340,12 +340,27 @@
     .dashboard-timer { font-size: 7rem; margin: 10px 0 30px 0; cursor: pointer; }
     .dashboard-timer:hover { transform: scale(1.02); }
 
+    .hold-bar-track {
+        width: 200px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 99px;
+        overflow: hidden;
+        margin-bottom: 8px;
+        transition: opacity 0.2s ease;
+    }
+
+    .hold-bar-fill {
+        height: 100%;
+        background: #ff4757;
+        border-radius: 99px;
+        transition: width 0.05s linear;
+    }
+
     .instruction { height: 24px; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; pointer-events: none; opacity: 0.5; color: var(--text-muted); }
     .text-danger { color: #ff4757; animation: pulse 1s infinite; opacity: 1; }
 
     /* --- UTILS --- */
-    .hidden { display: none; }
-    
     .task-pill { background: var(--surface); border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; max-width: 90%; }
     .task-title { display: inline-block; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
     .active-dot { color: #4caf50; font-size: 0.8rem; }
