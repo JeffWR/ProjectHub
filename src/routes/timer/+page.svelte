@@ -115,9 +115,9 @@
     let holdProgress = 0;
     let holdFrame;
     let holdStartTime;
-    const HOLD_DURATION = 2000; 
-    const RADIUS = 220; 
-    const CIRCUMFERENCE = 2 * Math.PI * RADIUS; 
+    const HOLD_DURATION = 2000;
+    const RADIUS = 240;
+    const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
     $: strokeDashoffset = CIRCUMFERENCE - (holdProgress / 100) * CIRCUMFERENCE;
 
     function startHold() {
@@ -212,10 +212,62 @@
 </div>
 {/if}
 
+<!-- ── POMODORO FOCUS OVERLAY (covers entire screen including nav) ── -->
+{#if hydrated && $timer.isRunning && $timer.mode === 'pomodoro'}
+<div
+    class="focus-overlay"
+    class:shaking={isHolding && holdProgress > 85}
+    on:mousedown={startHold}
+    on:mouseup={cancelHold}
+    on:mouseleave={cancelHold}
+    on:touchstart|preventDefault={startHold}
+    on:touchend={cancelHold}
+    on:contextmenu|preventDefault
+    in:immerse
+    out:emerge
+>
+    <!-- Hold-to-stop ring: absolute, centered, large enough to surround the timer text -->
+    <svg class="hold-ring" viewBox="0 0 500 500" aria-hidden="true">
+        <circle
+            stroke="rgba(255,255,255,0.07)" stroke-width="2" fill="transparent"
+            r={RADIUS} cx="250" cy="250"
+        />
+        <circle
+            stroke="#ff4757" stroke-width="2.5" fill="transparent"
+            r={RADIUS} cx="250" cy="250"
+            stroke-dasharray={CIRCUMFERENCE}
+            stroke-dashoffset={strokeDashoffset}
+            class="hold-ring__fill"
+            style="opacity: {isHolding ? 1 : 0}"
+        />
+    </svg>
+
+    <div class="focus-inner" in:fly={{ y: 28, duration: 700, delay: 380 }}>
+        <div class="focus-label">
+            {#if activeTask}
+                <span>{activeTask.title}</span>
+            {:else}
+                Focus Mode
+            {/if}
+        </div>
+
+        <div class="focus-time">{displayTime}</div>
+
+        <div class="focus-hint">
+            {#if isHolding}
+                <span class="text-danger">Keep holding to stop...</span>
+            {:else}
+                Hold anywhere to stop
+            {/if}
+        </div>
+    </div>
+</div>
+{/if}
+
 {#if isEditing}
-    <TimeEditor 
-        initialMinutes={editStartMinutes} 
-        on:close={() => isEditing = false} 
+    <TimeEditor
+        initialMinutes={editStartMinutes}
+        on:close={() => isEditing = false}
     />
 {/if}
 
@@ -285,6 +337,88 @@
     .cycle-info { margin-top: 20px; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
     @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
-    .shaking .big-time { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; color: #ff4757; }
     @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+    /* --- FULL-SCREEN FOCUS OVERLAY --- */
+    .focus-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        /* Fully opaque base + layered pattern */
+        background-color: #080404;
+        background-image:
+            /* Warm radial glow centred on the timer */
+            radial-gradient(ellipse 60% 55% at 50% 50%, rgba(160, 50, 50, 0.18) 0%, transparent 70%),
+            /* Subtle dot grid */
+            radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+        background-size: 100% 100%, 26px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        user-select: none;
+        transform-origin: center;
+    }
+
+    .focus-overlay.shaking .focus-time {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        color: #ff4757;
+    }
+
+    /* Ring: absolute, centered, 500×500 so r=240 puts it well outside the digits */
+    .hold-ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 600px;
+        height: 600px;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        pointer-events: none;
+    }
+
+    .hold-ring__fill {
+        transition: stroke-dashoffset 0.05s linear, opacity 0.3s ease;
+        stroke-linecap: round;
+    }
+
+    .focus-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+        position: relative; /* sits above the ring in stacking order */
+    }
+
+    .focus-label {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.5);
+        letter-spacing: 0.5px;
+        max-width: 420px;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .focus-time {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-weight: 800;
+        font-size: 9rem;
+        color: #ffffff;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+        letter-spacing: -5px;
+        pointer-events: none;
+    }
+
+    .focus-hint {
+        font-size: 0.7rem;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.25);
+        pointer-events: none;
+    }
 </style>
