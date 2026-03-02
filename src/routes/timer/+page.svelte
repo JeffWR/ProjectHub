@@ -5,7 +5,7 @@
     import { tasks, heroTask } from '$lib/stores/tasks';
     import { settings } from '$lib/stores/settings';
     import { history } from '$lib/stores/history';
-    import { fly } from 'svelte/transition';
+    import { fly, fade } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
 
     import { send, receive, growWithGradient } from '$lib/components/ui/transitions.js';
@@ -159,54 +159,68 @@
 >
     {#if $timer.isRunning && $timer.mode !== 'pomodoro'}
         <!-- ── BREAK RUNNING: dashboard view with countdown ── -->
-        <div class="task-pill">
-            <span class="break-dot">●</span> On break
-        </div>
+        <div class="panel-state"
+            in:fade={{ duration: 350, delay: 200 }}
+            out:fade={{ duration: 200 }}
+        >
+            <div class="task-pill">
+                <span class="break-dot">●</span> On break
+            </div>
 
-        <h1 class="timer-digits dashboard-timer">{displayTime}</h1>
+            <h1 class="timer-digits dashboard-timer">{displayTime}</h1>
 
-        <div class="instruction">
-            {#if isHolding}
-                <span class="text-danger">Keep holding to stop...</span>
-            {:else}
-                <span class="text-muted">Hold to Stop</span>
-            {/if}
+            <div class="hold-bar-track" style="opacity: {isHolding ? 1 : 0}">
+                <div class="hold-bar-fill" style="width: {holdProgress}%"></div>
+            </div>
+
+            <div class="instruction">
+                {#if isHolding}
+                    <span class="text-danger">Keep holding to stop...</span>
+                {:else}
+                    <span class="text-muted">Hold to Stop</span>
+                {/if}
+            </div>
         </div>
 
     {:else}
         <!-- ── STOPPED: full dashboard ── -->
-        <div class="task-pill">
-            {#if activeTask}
-                <span class="active-dot">●</span> Working on: <strong class="task-title">{activeTask.title}</strong>
+        <div class="panel-state"
+            in:fade={{ duration: 350, delay: 200 }}
+            out:fade={{ duration: 200 }}
+        >
+            <div class="task-pill">
+                {#if activeTask}
+                    <span class="active-dot">●</span> Working on: <strong class="task-title">{activeTask.title}</strong>
+                {:else}
+                    <span class="inactive">Drag a task to "In Focus" to start</span>
+                {/if}
+            </div>
+
+            {#if !isEditing}
+                <h1
+                    class="timer-digits dashboard-timer"
+                    on:click={startEditing}
+                    title="Click to edit"
+                >
+                    {displayTime}
+                </h1>
             {:else}
-                <span class="inactive">Drag a task to "In Focus" to start</span>
+                <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
             {/if}
+
+            <div class="controls">
+                <button class="btn-main" on:click={timer.start}>START</button>
         </div>
 
-        {#if !isEditing}
-            <h1
-                class="timer-digits dashboard-timer"
-                on:click={startEditing}
-                title="Click to edit"
-            >
-                {displayTime}
-            </h1>
-        {:else}
-            <div style="height: 7rem; margin: 10px 0 30px 0;"></div>
-        {/if}
+            <div class="modes">
+                <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
+                <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
+                <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
+            </div>
 
-        <div class="controls">
-            <button class="btn-main" on:click={timer.start}>START</button>
-        </div>
-
-        <div class="modes">
-            <button on:click={() => applyMode('pomodoro')} class:active={$timer.mode === 'pomodoro'}>Pomodoro</button>
-            <button on:click={() => applyMode('short')} class:active={$timer.mode === 'short'}>Short Break</button>
-            <button on:click={() => applyMode('long')} class:active={$timer.mode === 'long'}>Long Break</button>
-        </div>
-
-        <div class="cycle-info">
-            Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
+            <div class="cycle-info">
+                Session { (completedToday % ($settings?.longBreakInterval || 4)) + 1 } of { $settings?.longBreakInterval || 4 }
+            </div>
         </div>
     {/if}
 </div>
