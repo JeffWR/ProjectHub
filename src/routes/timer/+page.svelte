@@ -278,6 +278,7 @@
 <style>
     /* --- GLASS PANEL (DASHBOARD) --- */
     .glass-panel {
+        position: relative;
         background: var(--surface);
         backdrop-filter: blur(12px);
         border: 1px solid var(--border);
@@ -289,6 +290,7 @@
         box-shadow: var(--shadow);
         transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
         opacity: 1 !important;
+        overflow: hidden;
     }
     
     .glass-panel.dimmed {
@@ -299,6 +301,15 @@
     .glass-panel.running {
         cursor: pointer;
         gap: 20px;
+    }
+
+    .panel-state {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 
     /* --- TYPOGRAPHY --- */
