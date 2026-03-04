@@ -17,6 +17,38 @@
     let hydrated = false;
     onMount(() => {
         hydrated = true;
+
+        // Position the nav indicator once the DOM is ready (bind:this
+        // populates navLinks after the first render, so we need one tick)
+        setTimeout(recalcIndicator, 0);
+
+        // --- STALE TAB RELOAD ---
+        // If the tab was backgrounded for more than 30 minutes, force a reload
+        // when it becomes visible again. Prevents white/broken screens after
+        // long inactivity (browser suspends JS runtime).
+        const STALE_THRESHOLD = 10 * 60 * 1000;
+        let hiddenAt = null;
+
+        const onVisibility = () => {
+            if (document.visibilityState === 'hidden') {
+                hiddenAt = Date.now();
+            } else if (document.visibilityState === 'visible' && hiddenAt) {
+                if (Date.now() - hiddenAt > STALE_THRESHOLD) {
+                    window.location.reload();
+                }
+                hiddenAt = null;
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibility);
+
+        // --- RESIZE: recalc nav indicator when viewport changes ---
+        // (e.g. switching monitors with different DPR/resolution)
+        window.addEventListener('resize', recalcIndicator);
+
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('resize', recalcIndicator);
+        };
     });
 
     // --- NEW REACTIVE LOGIC ---
