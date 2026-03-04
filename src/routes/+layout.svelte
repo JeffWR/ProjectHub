@@ -40,16 +40,17 @@
     let navLinks = {};
     let indicatorStyle = '';
 
-    $: {
-        const path = $page.url.pathname;
-        const activeLink = navLinks[path];
+    function recalcIndicator() {
+        const activeLink = navLinks[$page.url.pathname];
         if (activeLink) {
             const rect = activeLink.getBoundingClientRect();
             const parentRect = activeLink.parentElement.getBoundingClientRect();
-            const left = rect.left - parentRect.left;
-            indicatorStyle = `left: ${left}px; width: ${rect.width}px;`;
+            indicatorStyle = `left: ${rect.left - parentRect.left}px; width: ${rect.width}px;`;
         }
     }
+
+    // Re-run whenever the route changes
+    $: $page.url.pathname, recalcIndicator();
 </script>
 
 <Toast />
