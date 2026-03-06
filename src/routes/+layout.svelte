@@ -107,7 +107,7 @@
 
         <div class="nav-center">
             <div class="nav-links-wrapper">
-                <div class="nav-indicator" style={indicatorStyle}></div>
+                {#if indicatorStyle}<div class="nav-indicator" style={indicatorStyle}></div>{/if}
                 <a href="/tasks" class:active={$page.url.pathname === '/tasks'} bind:this={navLinks['/tasks']}>
                     <ListTodo size={18} /> Tasks
                 </a>
