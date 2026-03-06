@@ -6,10 +6,12 @@
     import SyncStatus from '$lib/components/SyncStatus.svelte';
     import { browser } from '$app/environment';
     import { onMount } from 'svelte';
+    import { invalidateAll } from '$app/navigation';
     import { user } from '$lib/stores/auth';
     import { loadTasks } from '$lib/stores/tasks';
     import { settings } from '$lib/stores/settings';
     import { themes } from '$lib/themes';
+    import { addToast } from '$lib/stores/toast';
 
     let showSettings = false;
 
@@ -22,19 +24,22 @@
         // populates navLinks after the first render, so we need one tick)
         setTimeout(recalcIndicator, 0);
 
-        // --- STALE TAB RELOAD ---
-        // If the tab was backgrounded for more than 30 minutes, force a reload
-        // when it becomes visible again. Prevents white/broken screens after
-        // long inactivity (browser suspends JS runtime).
+        // --- STALE TAB SOFT REFRESH ---
+        // If the tab was backgrounded for more than 10 minutes, re-fetch data
+        // when it becomes visible again — without a full page reload (no flash).
+        // invalidateAll() re-runs SvelteKit load functions; loadTasks() syncs
+        // the task store from the cloud. Svelte's reactivity handles the diff.
         const STALE_THRESHOLD = 10 * 60 * 1000;
         let hiddenAt = null;
 
-        const onVisibility = () => {
+        const onVisibility = async () => {
             if (document.visibilityState === 'hidden') {
                 hiddenAt = Date.now();
             } else if (document.visibilityState === 'visible' && hiddenAt) {
                 if (Date.now() - hiddenAt > STALE_THRESHOLD) {
-                    window.location.reload();
+                    addToast('Refreshing data…', 'info');
+                    await invalidateAll();
+                    if ($user) loadTasks();
                 }
                 hiddenAt = null;
             }
