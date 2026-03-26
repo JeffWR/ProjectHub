@@ -377,12 +377,12 @@
 	@media (max-width: 768px) {
 		.modal-backdrop {
 			padding: 12px;
-			align-items: flex-end;
+			align-items: center;
 		}
 		.modal-glass {
 			border-radius: 20px;
 			padding: 20px;
-			max-height: 90vh;
+			max-height: 92vh;
 			gap: 14px;
 		}
 		.title-input {

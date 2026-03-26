@@ -325,11 +325,12 @@
 		:global(main) {
 			align-items: center !important;
 			justify-content: center !important;
-			padding: 16px 0 81px 0 !important; /* 16px top + 65px bottom nav */
+			min-height: calc(100vh - 65px) !important;
+			padding: 16px 16px 81px 16px !important;
 		}
 
 		.glass-panel {
-			width: calc(100vw - 32px);
+			width: 100%;
 			max-width: 420px;
 			aspect-ratio: auto;
 			min-height: 380px;
