@@ -1,5 +1,5 @@
 <script>
-	import { Trash2, Clock, PlayCircle, Archive } from 'lucide-svelte';
+	import { Trash2, Clock, PlayCircle, Archive, ChevronLeft } from 'lucide-svelte';
 	import { deleteTask, moveTask } from '$lib/stores/tasks';
 
 	export let task;
@@ -24,6 +24,13 @@
 		<div class="priority-badge" style="color: {pColor}; background: {pColor}15;">
 			{task.priority}
 		</div>
+
+		<!-- Mobile swipe hint — hidden on desktop -->
+		{#if !isReview}
+			<div class="swipe-hint" aria-hidden="true">
+				<ChevronLeft size={14} />
+			</div>
+		{/if}
 
 		{#if isHero}
 			<div class="hero-label">
@@ -113,6 +120,35 @@
 		cursor: grabbing;
 	}
 
+	/* Swipe hint chevron — only visible on mobile */
+	.swipe-hint {
+		display: none;
+	}
+	@media (max-width: 768px) {
+		.swipe-hint {
+			display: flex;
+			align-items: center;
+			color: #b2bec3;
+			opacity: 0.5;
+			margin-left: 6px;
+			flex-shrink: 0;
+			animation: nudge 3s ease-in-out infinite;
+		}
+	}
+	@keyframes nudge {
+		0%,
+		70%,
+		100% {
+			transform: translateX(0);
+		}
+		80% {
+			transform: translateX(-4px);
+		}
+		90% {
+			transform: translateX(-1px);
+		}
+	}
+
 	/* Typography */
 	h4 {
 		margin: 0 0 8px 0;
@@ -137,6 +173,7 @@
 		display: flex;
 		align-items: center;
 		margin-bottom: 12px;
+		gap: 6px;
 	}
 	.priority-badge {
 		font-size: 0.75rem;
@@ -155,7 +192,7 @@
 		align-items: center;
 		gap: 6px;
 		margin-left: auto;
-		margin-right: 15px;
+		margin-right: 8px;
 		animation: pulse 2s infinite;
 	}
 	.delete-btn {

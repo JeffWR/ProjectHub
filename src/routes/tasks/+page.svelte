@@ -15,7 +15,6 @@
 	// Prevent hydration flash and trigger staggered animation
 	let hydrated = false;
 	onMount(() => {
-		// Small delay ensures the browser paints the initial opacity: 0 state
 		requestAnimationFrame(() => {
 			hydrated = true;
 		});
@@ -34,96 +33,73 @@
 		selectedTask = task;
 	}
 
-	// --- TRELLO-STYLE DRAG & DROP (from TaskBoard.svelte) ---
+	// ─────────────────────────────────────────────
+	//  DESKTOP: HTML5 Drag & Drop
+	// ─────────────────────────────────────────────
 	let draggedTaskId = null;
-	let dropTargetInfo = null; // { taskId, insertBefore: boolean }
+	let dropTargetInfo = null;
 	let autoScrollInterval = null;
 	let lastMouseX = 0;
 	let lastMouseY = 0;
-	let draggedTaskHeight = 80; // Default height, will be set on drag start
+	let draggedTaskHeight = 80;
 
 	function handleDragStart(event, id) {
 		event.dataTransfer.setData('text/plain', id);
 		event.dataTransfer.effectAllowed = 'move';
 		draggedTaskId = id;
 
-		// Capture the height of the dragged task for placeholder sizing
 		const dragElement = event.currentTarget;
 		draggedTaskHeight = dragElement.offsetHeight;
 
-		// Calculate where the user clicked relative to the element
 		const rect = dragElement.getBoundingClientRect();
-		const offsetX = event.clientX - rect.left + 30; // +30 for wrapper padding
-		const offsetY = event.clientY - rect.top + 30; // +30 for wrapper padding
+		const offsetX = event.clientX - rect.left + 30;
+		const offsetY = event.clientY - rect.top + 30;
 
-		// Create a wrapper with extra space for the tilted element
 		const wrapper = document.createElement('div');
 		wrapper.style.position = 'absolute';
 		wrapper.style.top = '-9999px';
 		wrapper.style.left = '-9999px';
-		wrapper.style.padding = '30px'; // Extra space for rotation overhang
+		wrapper.style.padding = '30px';
 		wrapper.style.overflow = 'visible';
 		wrapper.style.pointerEvents = 'none';
 
-		// Create the tilted clone
 		const clone = dragElement.cloneNode(true);
 		clone.style.transform = 'rotate(5deg)';
-		clone.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.3)';
+		clone.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)';
 		clone.style.width = dragElement.offsetWidth + 'px';
 		clone.style.opacity = '0.9';
 
 		wrapper.appendChild(clone);
 		document.body.appendChild(wrapper);
-
-		// Set the wrapper as the drag image with the click offset
 		event.dataTransfer.setDragImage(wrapper, offsetX, offsetY);
 
-		// Clean up after drag starts
 		setTimeout(() => {
-			if (document.body.contains(wrapper)) {
-				document.body.removeChild(wrapper);
-			}
+			if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
 		}, 0);
 
-		// Start auto-scroll on drag
 		startAutoScroll();
 	}
 
-	function handleDragEnd(event) {
+	function handleDragEnd() {
 		draggedTaskId = null;
 		dropTargetInfo = null;
 		stopAutoScroll();
 	}
 
-	// Auto-scroll functionality
 	function startAutoScroll() {
-		// Track mouse position during drag
 		document.addEventListener('dragover', trackMousePosition);
-
-		// Check for auto-scroll every 50ms
 		autoScrollInterval = setInterval(() => {
 			if (!draggedTaskId) return;
-
-			// Find which scroll area the mouse is currently over
-			const elementAtPoint = document.elementFromPoint(lastMouseX, lastMouseY);
-			if (!elementAtPoint) return;
-
-			// Find the closest scroll-area ancestor
-			const scrollArea = elementAtPoint.closest('.scroll-area');
+			const el = document.elementFromPoint(lastMouseX, lastMouseY);
+			if (!el) return;
+			const scrollArea = el.closest('.scroll-area');
 			if (!scrollArea) return;
-
 			const rect = scrollArea.getBoundingClientRect();
-			const scrollZone = 80; // px from edge to trigger scroll
-			const scrollSpeed = 10; // px per interval
-
-			// Near top - scroll up
-			if (lastMouseY - rect.top < scrollZone && lastMouseY > rect.top) {
-				scrollArea.scrollTop -= scrollSpeed;
-			}
-			// Near bottom - scroll down
-			else if (rect.bottom - lastMouseY < scrollZone && lastMouseY < rect.bottom) {
-				scrollArea.scrollTop += scrollSpeed;
-			}
+			const zone = 80;
+			const speed = 10;
+			if (lastMouseY - rect.top < zone && lastMouseY > rect.top) scrollArea.scrollTop -= speed;
+			else if (rect.bottom - lastMouseY < zone && lastMouseY < rect.bottom)
+				scrollArea.scrollTop += speed;
 		}, 50);
 	}
 
@@ -143,47 +119,33 @@
 	function handleDragOver(event, task) {
 		event.preventDefault();
 		event.stopPropagation();
-
 		if (!draggedTaskId || draggedTaskId === task.id) {
 			dropTargetInfo = null;
 			return;
 		}
-
-		// Calculate if cursor is in top half or bottom half of the task
 		const rect = event.currentTarget.getBoundingClientRect();
-		const mouseY = event.clientY;
-		const taskMiddle = rect.top + rect.height / 2;
-		const insertBefore = mouseY < taskMiddle;
-
-		// Update drop target info
-		dropTargetInfo = {
-			taskId: task.id,
-			insertBefore: insertBefore
-		};
+		const insertBefore = event.clientY < rect.top + rect.height / 2;
+		dropTargetInfo = { taskId: task.id, insertBefore };
 	}
 
 	function handleZoneDrop(event, newStatus) {
 		event.preventDefault();
 		const id = event.dataTransfer.getData('text/plain');
-
 		if (!id) return;
-
-		// More forgiving: If we have position info from hovering, use it!
-		if (dropTargetInfo && dropTargetInfo.taskId) {
+		if (dropTargetInfo?.taskId) {
 			const targetTask = $tasks.find((t) => t.id === dropTargetInfo.taskId);
 			if (targetTask && targetTask.status === newStatus) {
-				// Use the task drop handler with the remembered position
-				const mockEvent = {
-					preventDefault: () => {},
-					stopPropagation: () => {},
-					dataTransfer: event.dataTransfer
-				};
-				handleTaskDrop(mockEvent, targetTask);
+				handleTaskDrop(
+					{
+						preventDefault: () => {},
+						stopPropagation: () => {},
+						dataTransfer: event.dataTransfer
+					},
+					targetTask
+				);
 				return;
 			}
 		}
-
-		// Otherwise, append to end of column
 		moveTask(id, newStatus);
 		dropTargetInfo = null;
 	}
@@ -191,56 +153,285 @@
 	function handleTaskDrop(event, targetTask) {
 		event.preventDefault();
 		event.stopPropagation();
-
 		const draggedId = event.dataTransfer.getData('text/plain');
-
-		// Basic validation
 		if (!draggedId || draggedId === targetTask.id) {
 			dropTargetInfo = null;
 			return;
 		}
-
-		// Find the dragged task
 		const draggedTask = $tasks.find((t) => t.id === draggedId);
 		if (!draggedTask) {
-			console.error('Task drop failed: Task not found');
 			dropTargetInfo = null;
 			return;
 		}
-
-		// If dropTargetInfo doesn't match this task, recalculate based on where we actually dropped
 		if (!dropTargetInfo || dropTargetInfo.taskId !== targetTask.id) {
-			// Default to inserting AFTER the target task
-			dropTargetInfo = {
-				taskId: targetTask.id,
-				insertBefore: false
-			};
+			dropTargetInfo = { taskId: targetTask.id, insertBefore: false };
 		}
-
-		// Calculate the correct insertion index
 		const targetIndex = $tasks.findIndex((t) => t.id === targetTask.id);
 		const draggedIndex = $tasks.findIndex((t) => t.id === draggedId);
-
 		let insertIndex;
-
 		if (dropTargetInfo.insertBefore) {
-			// Insert BEFORE the target task
 			insertIndex = targetIndex;
-			// If dragging from above, compensate for the removal
-			if (draggedIndex < targetIndex) {
-				insertIndex--;
-			}
+			if (draggedIndex < targetIndex) insertIndex--;
 		} else {
-			// Insert AFTER the target task
 			insertIndex = targetIndex + 1;
-			// If dragging from above, compensate for the removal
-			if (draggedIndex < targetIndex) {
-				insertIndex--;
-			}
+			if (draggedIndex < targetIndex) insertIndex--;
 		}
-
 		moveTask(draggedId, targetTask.status, insertIndex);
 		dropTargetInfo = null;
+	}
+
+	// ─────────────────────────────────────────────
+	//  MOBILE: Touch Drag & Drop
+	// ─────────────────────────────────────────────
+	let touchDragId = null;
+	let touchClone = null;
+	let touchStartX = 0;
+	let touchStartY = 0;
+	let touchOffsetX = 0;
+	let touchOffsetY = 0;
+	let touchDropColumn = null; // 'todo' | 'inprogress' | 'review'
+	let touchDropTargetId = null;
+	let touchInsertBefore = false;
+	let touchAutoScrollInterval = null;
+	let touchLastY = 0;
+
+	function isMobile() {
+		return window.innerWidth <= 768;
+	}
+
+	function onTouchDragStart(e, taskId) {
+		// Only activate touch drag on mobile
+		if (!isMobile()) return;
+
+		// If it's a tap (not a hold), let it fall through to click
+		// We start the drag on touchstart but only commit after a small move threshold
+		touchDragId = taskId;
+		const touch = e.touches[0];
+		touchStartX = touch.clientX;
+		touchStartY = touch.clientY;
+		touchLastY = touch.clientY;
+	}
+
+	function onTouchDragMove(e, taskId) {
+		if (touchDragId !== taskId) return;
+
+		const touch = e.touches[0];
+		const dx = touch.clientX - touchStartX;
+		const dy = touch.clientY - touchStartY;
+
+		// Only start visual drag after moving 8px (distinguish tap from drag)
+		if (!touchClone && Math.sqrt(dx * dx + dy * dy) < 8) return;
+
+		// Prevent page scroll while dragging a card
+		e.preventDefault();
+
+		touchLastY = touch.clientY;
+
+		// Create clone on first real move
+		if (!touchClone) {
+			const el = e.currentTarget;
+			const rect = el.getBoundingClientRect();
+			touchOffsetX = touch.clientX - rect.left;
+			touchOffsetY = touch.clientY - rect.top;
+
+			touchClone = el.cloneNode(true);
+			touchClone.style.position = 'fixed';
+			touchClone.style.zIndex = '9999';
+			touchClone.style.width = rect.width + 'px';
+			touchClone.style.pointerEvents = 'none';
+			touchClone.style.opacity = '0.85';
+			touchClone.style.transform = 'rotate(3deg) scale(1.03)';
+			touchClone.style.boxShadow = '0 12px 30px rgba(0,0,0,0.3)';
+			touchClone.style.borderRadius = '16px';
+			touchClone.style.transition = 'none';
+			touchClone.style.left = touch.clientX - touchOffsetX + 'px';
+			touchClone.style.top = touch.clientY - touchOffsetY + 'px';
+			document.body.appendChild(touchClone);
+
+			startTouchAutoScroll();
+		} else {
+			touchClone.style.left = touch.clientX - touchOffsetX + 'px';
+			touchClone.style.top = touch.clientY - touchOffsetY + 'px';
+		}
+
+		// Determine which column and task the finger is over
+		touchClone.style.display = 'none';
+		const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+		touchClone.style.display = '';
+
+		if (elBelow) {
+			// Which column?
+			const colEl = elBelow.closest('[data-column]');
+			touchDropColumn = colEl ? colEl.dataset.column : null;
+
+			// Which task card?
+			const cardEl = elBelow.closest('[data-task-id]');
+			if (cardEl && cardEl.dataset.taskId !== taskId) {
+				const rect = cardEl.getBoundingClientRect();
+				touchDropTargetId = cardEl.dataset.taskId;
+				touchInsertBefore = touch.clientY < rect.top + rect.height / 2;
+			} else {
+				touchDropTargetId = null;
+				touchInsertBefore = false;
+			}
+		}
+	}
+
+	function onTouchDragEnd(e, taskId) {
+		if (touchDragId !== taskId) return;
+
+		stopTouchAutoScroll();
+
+		if (touchClone) {
+			document.body.removeChild(touchClone);
+			touchClone = null;
+
+			// Commit the drop
+			if (touchDropColumn) {
+				if (touchDropTargetId) {
+					const targetTask = $tasks.find((t) => t.id === touchDropTargetId);
+					if (targetTask) {
+						const targetIndex = $tasks.findIndex((t) => t.id === touchDropTargetId);
+						const draggedIndex = $tasks.findIndex((t) => t.id === taskId);
+						let insertIndex;
+						if (touchInsertBefore) {
+							insertIndex = targetIndex;
+							if (draggedIndex < targetIndex) insertIndex--;
+						} else {
+							insertIndex = targetIndex + 1;
+							if (draggedIndex < targetIndex) insertIndex--;
+						}
+						moveTask(taskId, targetTask.status, insertIndex);
+					}
+				} else {
+					// Dropped on empty column area
+					moveTask(taskId, touchDropColumn);
+				}
+			}
+		}
+		// else: it was just a tap — let the click handler fire
+
+		touchDragId = null;
+		touchDropColumn = null;
+		touchDropTargetId = null;
+		touchInsertBefore = false;
+	}
+
+	function startTouchAutoScroll() {
+		touchAutoScrollInterval = setInterval(() => {
+			if (!touchClone) return;
+			const el = document.elementFromPoint(
+				parseFloat(touchClone.style.left) + parseFloat(touchClone.style.width) / 2,
+				touchLastY
+			);
+			if (!el) return;
+			const scrollArea = el.closest('.scroll-area');
+			if (!scrollArea) return;
+			const rect = scrollArea.getBoundingClientRect();
+			const zone = 80;
+			const speed = 8;
+			if (touchLastY - rect.top < zone) scrollArea.scrollTop -= speed;
+			else if (rect.bottom - touchLastY < zone) scrollArea.scrollTop += speed;
+		}, 50);
+	}
+
+	function stopTouchAutoScroll() {
+		if (touchAutoScrollInterval) {
+			clearInterval(touchAutoScrollInterval);
+			touchAutoScrollInterval = null;
+		}
+	}
+
+	// ─────────────────────────────────────────────
+	//  MOBILE: Swipe-to-reveal action buttons
+	// ─────────────────────────────────────────────
+	// swipeState[taskId] = { x: number, swiping: boolean }
+	let swipeState = {};
+	let swipeStartX = {};
+	let swipeStartY = {};
+	let swipeActive = {}; // true once we've confirmed horizontal swipe
+	const SWIPE_THRESHOLD = 60; // px to reveal actions
+	const SWIPE_MAX = 160; // max reveal width
+
+	function onSwipeTouchStart(e, taskId) {
+		if (!isMobile()) return;
+		const t = e.touches[0];
+		swipeStartX[taskId] = t.clientX;
+		swipeStartY[taskId] = t.clientY;
+		swipeActive[taskId] = false;
+	}
+
+	function onSwipeTouchMove(e, taskId) {
+		if (!isMobile()) return;
+		const t = e.touches[0];
+		const dx = t.clientX - swipeStartX[taskId];
+		const dy = t.clientY - swipeStartY[taskId];
+
+		// Confirm horizontal swipe (more X than Y movement)
+		if (!swipeActive[taskId]) {
+			if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+			if (Math.abs(dy) > Math.abs(dx)) return; // vertical scroll wins
+			swipeActive[taskId] = true;
+		}
+
+		// Only allow left swipe (negative dx)
+		if (dx > 0) {
+			// Swiping right: close if open
+			swipeState = { ...swipeState, [taskId]: 0 };
+			return;
+		}
+
+		e.preventDefault(); // prevent scroll while swiping card
+		const clamped = Math.min(Math.abs(dx), SWIPE_MAX);
+		swipeState = { ...swipeState, [taskId]: clamped };
+	}
+
+	function onSwipeTouchEnd(e, taskId) {
+		if (!isMobile()) return;
+		const current = swipeState[taskId] || 0;
+		if (current >= SWIPE_THRESHOLD) {
+			// Snap open
+			swipeState = { ...swipeState, [taskId]: SWIPE_MAX };
+		} else {
+			// Snap closed
+			swipeState = { ...swipeState, [taskId]: 0 };
+		}
+		swipeActive[taskId] = false;
+	}
+
+	function closeSwipe(taskId) {
+		swipeState = { ...swipeState, [taskId]: 0 };
+	}
+
+	function closeAllSwipes(exceptId = null) {
+		const next = {};
+		for (const id of Object.keys(swipeState)) {
+			next[id] = id === exceptId ? swipeState[id] : 0;
+		}
+		swipeState = next;
+	}
+
+	// Move task and close swipe
+	function swipeMove(taskId, newStatus) {
+		closeSwipe(taskId);
+		setTimeout(() => moveTask(taskId, newStatus), 200);
+	}
+
+	// Actions available per status
+	function swipeActions(task) {
+		if (task.status === 'todo') {
+			return [{ label: 'In Focus', status: 'inprogress', color: '#4caf50' }];
+		}
+		if (task.status === 'inprogress') {
+			return [
+				{ label: 'To Do', status: 'todo', color: '#fdcb6e' },
+				{ label: 'Review', status: 'review', color: '#74b9ff' }
+			];
+		}
+		if (task.status === 'review') {
+			return [{ label: 'To Do', status: 'todo', color: '#fdcb6e' }];
+		}
+		return [];
 	}
 </script>
 
@@ -250,35 +441,38 @@
 	<TaskDetailModal task={selectedTask} on:close={() => (selectedTask = null)} />
 {/if}
 
-<div class="grid-container">
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<div class="grid-container" on:click={() => closeAllSwipes()}>
 	<!-- Mobile-only tab switcher -->
 	<div class="mobile-tabs">
 		<button
 			class="mobile-tab-btn"
 			class:active={mobileTab === 'todo'}
-			on:click={() => (mobileTab = 'todo')}
+			on:click|stopPropagation={() => (mobileTab = 'todo')}
 		>
 			To Do <span class="mobile-tab-badge">{todoTasks.length}</span>
 		</button>
 		<button
 			class="mobile-tab-btn"
 			class:active={mobileTab === 'focus'}
-			on:click={() => (mobileTab = 'focus')}
+			on:click|stopPropagation={() => (mobileTab = 'focus')}
 		>
 			In Focus <span class="mobile-tab-badge">{progressTasks.length}</span>
 		</button>
 		<button
 			class="mobile-tab-btn"
 			class:active={mobileTab === 'review'}
-			on:click={() => (mobileTab = 'review')}
+			on:click|stopPropagation={() => (mobileTab = 'review')}
 		>
 			Review <span class="mobile-tab-badge">{reviewTasks.length}</span>
 		</button>
 	</div>
 
+	<!-- ── LEFT COL: To Do ── -->
 	<div class="col-left" class:mobile-active={mobileTab === 'todo'}>
 		<div class="create-section">
-			<button class="big-create-btn" on:click={() => (showModal = true)}>
+			<button class="big-create-btn" on:click|stopPropagation={() => (showModal = true)}>
 				<div class="icon-circle"><Plus size={32} /></div>
 				<span>Create New Task</span>
 			</button>
@@ -287,6 +481,7 @@
 		<div
 			class="section list-section"
 			role="list"
+			data-column="todo"
 			on:drop={(e) => handleZoneDrop(e, 'todo')}
 			on:dragover|preventDefault
 		>
@@ -298,7 +493,6 @@
 			</div>
 			<div class="scroll-area">
 				{#each todoTasks as task, index (task.id)}
-					<!-- Show placeholder BEFORE task if cursor is in top half -->
 					{#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
 						<div
 							class="drop-placeholder"
@@ -310,26 +504,74 @@
 						</div>
 					{/if}
 
-					<!-- The task itself -->
+					<!-- Swipe wrapper -->
 					<div
-						draggable="true"
-						class:being-dragged={draggedTaskId === task.id}
-						on:dragstart={(e) => handleDragStart(e, task.id)}
-						on:dragend={handleDragEnd}
-						on:dragover={(e) => handleDragOver(e, task)}
-						on:drop={(e) => handleTaskDrop(e, task)}
-						on:dblclick={() => openTaskDetail(task)}
-						role="listitem"
-						title="Double-click to view details"
-						style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated
-							? 0
-							: 20}px); transition: opacity 0.6s ease-out {index *
-							0.12}s, transform 0.6s ease-out {index * 0.12}s"
+						class="swipe-row"
+						style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated ? 0 : 20}px);
+							   transition: opacity 0.6s ease-out {index * 0.12}s, transform 0.6s ease-out {index * 0.12}s"
 					>
-						<TaskItem {task} />
+						<!-- Actions revealed on swipe -->
+						<div class="swipe-actions" style="width: {swipeState[task.id] || 0}px">
+							{#each swipeActions(task) as action}
+								<button
+									class="swipe-action-btn"
+									style="background: {action.color}"
+									on:click|stopPropagation={() => swipeMove(task.id, action.status)}
+								>
+									{action.label}
+								</button>
+							{/each}
+						</div>
+
+						<!-- Card with unified touch handling -->
+						<div
+							class="card-wrapper"
+							data-task-id={task.id}
+							draggable="true"
+							class:being-dragged={draggedTaskId === task.id}
+							class:touch-dragging={touchDragId === task.id && touchClone}
+							style="transform: translateX(-{swipeState[task.id] || 0}px)"
+							on:dragstart={(e) => handleDragStart(e, task.id)}
+							on:dragend={handleDragEnd}
+							on:dragover={(e) => handleDragOver(e, task)}
+							on:drop={(e) => handleTaskDrop(e, task)}
+							on:touchstart={(e) => {
+								closeAllSwipes(task.id);
+								onSwipeTouchStart(e, task.id);
+								onTouchDragStart(e, task.id);
+							}}
+							on:touchmove={(e) => {
+								// Only one gesture at a time
+								if (touchClone || (touchDragId === task.id && !swipeActive[task.id])) {
+									onTouchDragMove(e, task.id);
+								} else {
+									onSwipeTouchMove(e, task.id);
+								}
+							}}
+							on:touchend={(e) => {
+								if (touchClone || (touchDragId === task.id && touchClone)) {
+									onTouchDragEnd(e, task.id);
+								} else {
+									onSwipeTouchEnd(e, task.id);
+									// Tap with no swipe = open detail
+									if (!swipeActive[task.id] && (swipeState[task.id] || 0) < 10) {
+										openTaskDetail(task);
+									}
+									touchDragId = null;
+								}
+							}}
+							on:click={() => {
+								// Desktop double-click handled separately; single click on mobile already done via touchend
+								if (!isMobile()) return;
+							}}
+							on:dblclick={() => openTaskDetail(task)}
+							role="listitem"
+							title="Swipe left for actions · Double-click to edit"
+						>
+							<TaskItem {task} />
+						</div>
 					</div>
 
-					<!-- Show placeholder AFTER task if cursor is in bottom half -->
 					{#if dropTargetInfo?.taskId === task.id && !dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
 						<div
 							class="drop-placeholder"
@@ -345,10 +587,12 @@
 		</div>
 	</div>
 
+	<!-- ── MID COL: In Focus ── -->
 	<div
 		class="col-mid section"
 		class:mobile-active={mobileTab === 'focus'}
 		role="list"
+		data-column="inprogress"
 		on:drop={(e) => handleZoneDrop(e, 'inprogress')}
 		on:dragover|preventDefault
 	>
@@ -360,7 +604,6 @@
 		</div>
 		<div class="scroll-area">
 			{#each progressTasks as task, index (task.id)}
-				<!-- Show placeholder BEFORE task if cursor is in top half -->
 				{#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
 					<div
 						class="drop-placeholder"
@@ -372,26 +615,65 @@
 					</div>
 				{/if}
 
-				<!-- The task itself -->
 				<div
-					draggable="true"
-					class:being-dragged={draggedTaskId === task.id}
-					on:dragstart={(e) => handleDragStart(e, task.id)}
-					on:dragend={handleDragEnd}
-					on:dragover={(e) => handleDragOver(e, task)}
-					on:drop={(e) => handleTaskDrop(e, task)}
-					on:dblclick={() => openTaskDetail(task)}
-					role="listitem"
-					title="Double-click to view details"
-					style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated
-						? 0
-						: 20}px); transition: opacity 0.6s ease-out {index *
-						0.12}s, transform 0.6s ease-out {index * 0.12}s"
+					class="swipe-row"
+					style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated ? 0 : 20}px);
+						   transition: opacity 0.6s ease-out {index * 0.12}s, transform 0.6s ease-out {index * 0.12}s"
 				>
-					<TaskItem {task} showProgress={true} isHero={index === 0} />
+					<div class="swipe-actions" style="width: {swipeState[task.id] || 0}px">
+						{#each swipeActions(task) as action}
+							<button
+								class="swipe-action-btn"
+								style="background: {action.color}"
+								on:click|stopPropagation={() => swipeMove(task.id, action.status)}
+							>
+								{action.label}
+							</button>
+						{/each}
+					</div>
+
+					<div
+						class="card-wrapper"
+						data-task-id={task.id}
+						draggable="true"
+						class:being-dragged={draggedTaskId === task.id}
+						class:touch-dragging={touchDragId === task.id && touchClone}
+						style="transform: translateX(-{swipeState[task.id] || 0}px)"
+						on:dragstart={(e) => handleDragStart(e, task.id)}
+						on:dragend={handleDragEnd}
+						on:dragover={(e) => handleDragOver(e, task)}
+						on:drop={(e) => handleTaskDrop(e, task)}
+						on:touchstart={(e) => {
+							closeAllSwipes(task.id);
+							onSwipeTouchStart(e, task.id);
+							onTouchDragStart(e, task.id);
+						}}
+						on:touchmove={(e) => {
+							if (touchClone || (touchDragId === task.id && !swipeActive[task.id])) {
+								onTouchDragMove(e, task.id);
+							} else {
+								onSwipeTouchMove(e, task.id);
+							}
+						}}
+						on:touchend={(e) => {
+							if (touchClone || (touchDragId === task.id && touchClone)) {
+								onTouchDragEnd(e, task.id);
+							} else {
+								onSwipeTouchEnd(e, task.id);
+								if (!swipeActive[task.id] && (swipeState[task.id] || 0) < 10) {
+									openTaskDetail(task);
+								}
+								touchDragId = null;
+							}
+						}}
+						on:dblclick={() => openTaskDetail(task)}
+						role="listitem"
+						title="Swipe left for actions · Double-click to edit"
+					>
+						<TaskItem {task} showProgress={true} isHero={index === 0} />
+					</div>
 				</div>
 
-				<!-- Show placeholder AFTER task if cursor is in bottom half -->
 				{#if dropTargetInfo?.taskId === task.id && !dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
 					<div
 						class="drop-placeholder"
@@ -405,15 +687,20 @@
 			{/each}
 
 			{#if hydrated && progressTasks.length === 0}
-				<div class="empty-placeholder">Drag tasks here to work on them</div>
+				<div class="empty-placeholder">
+					<span class="empty-icon">🎯</span>
+					<span>Drag a task here<br /><small>or swipe left on a task</small></span>
+				</div>
 			{/if}
 		</div>
 	</div>
 
+	<!-- ── RIGHT COL: Review ── -->
 	<div class="col-right" class:mobile-active={mobileTab === 'review'}>
 		<div
 			class="section review-section"
 			role="list"
+			data-column="review"
 			on:drop={(e) => handleZoneDrop(e, 'review')}
 			on:dragover|preventDefault
 		>
@@ -425,7 +712,6 @@
 			</div>
 			<div class="scroll-area">
 				{#each reviewTasks as task, index (task.id)}
-					<!-- Show placeholder BEFORE task if cursor is in top half -->
 					{#if dropTargetInfo?.taskId === task.id && dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
 						<div
 							class="drop-placeholder"
@@ -437,26 +723,65 @@
 						</div>
 					{/if}
 
-					<!-- The task itself -->
 					<div
-						draggable="true"
-						class:being-dragged={draggedTaskId === task.id}
-						on:dragstart={(e) => handleDragStart(e, task.id)}
-						on:dragend={handleDragEnd}
-						on:dragover={(e) => handleDragOver(e, task)}
-						on:drop={(e) => handleTaskDrop(e, task)}
-						on:dblclick={() => openTaskDetail(task)}
-						role="listitem"
-						title="Double-click to view details"
-						style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated
-							? 0
-							: 20}px); transition: opacity 0.6s ease-out {index *
-							0.12}s, transform 0.6s ease-out {index * 0.12}s"
+						class="swipe-row"
+						style="opacity: {hydrated ? 1 : 0}; transform: translateY({hydrated ? 0 : 20}px);
+							   transition: opacity 0.6s ease-out {index * 0.12}s, transform 0.6s ease-out {index * 0.12}s"
 					>
-						<TaskItem {task} />
+						<div class="swipe-actions" style="width: {swipeState[task.id] || 0}px">
+							{#each swipeActions(task) as action}
+								<button
+									class="swipe-action-btn"
+									style="background: {action.color}"
+									on:click|stopPropagation={() => swipeMove(task.id, action.status)}
+								>
+									{action.label}
+								</button>
+							{/each}
+						</div>
+
+						<div
+							class="card-wrapper"
+							data-task-id={task.id}
+							draggable="true"
+							class:being-dragged={draggedTaskId === task.id}
+							class:touch-dragging={touchDragId === task.id && touchClone}
+							style="transform: translateX(-{swipeState[task.id] || 0}px)"
+							on:dragstart={(e) => handleDragStart(e, task.id)}
+							on:dragend={handleDragEnd}
+							on:dragover={(e) => handleDragOver(e, task)}
+							on:drop={(e) => handleTaskDrop(e, task)}
+							on:touchstart={(e) => {
+								closeAllSwipes(task.id);
+								onSwipeTouchStart(e, task.id);
+								onTouchDragStart(e, task.id);
+							}}
+							on:touchmove={(e) => {
+								if (touchClone || (touchDragId === task.id && !swipeActive[task.id])) {
+									onTouchDragMove(e, task.id);
+								} else {
+									onSwipeTouchMove(e, task.id);
+								}
+							}}
+							on:touchend={(e) => {
+								if (touchClone || (touchDragId === task.id && touchClone)) {
+									onTouchDragEnd(e, task.id);
+								} else {
+									onSwipeTouchEnd(e, task.id);
+									if (!swipeActive[task.id] && (swipeState[task.id] || 0) < 10) {
+										openTaskDetail(task);
+									}
+									touchDragId = null;
+								}
+							}}
+							on:dblclick={() => openTaskDetail(task)}
+							role="listitem"
+							title="Swipe left for actions · Double-click to edit"
+						>
+							<TaskItem {task} />
+						</div>
 					</div>
 
-					<!-- Show placeholder AFTER task if cursor is in bottom half -->
 					{#if dropTargetInfo?.taskId === task.id && !dropTargetInfo?.insertBefore && draggedTaskId !== task.id}
 						<div
 							class="drop-placeholder"
@@ -536,34 +861,27 @@
 		min-height: 0;
 	}
 
-	/* --- THE SCROLLING & FADE MAGIC --- */
+	/* SCROLL AREA */
 	.scroll-area {
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
 		overflow-x: hidden;
-
-		/* HIDE SCROLLBAR */
 		scrollbar-width: none;
 		-ms-overflow-style: none;
-
-		/* FADE EFFECT */
 		-webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
 		mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-
 		padding: 20px;
-		padding-bottom: 40px; /* Ensure last item isn't cut */
-
+		padding-bottom: 40px;
 		display: flex;
 		flex-direction: column;
 		gap: 15px;
 	}
-
 	.scroll-area::-webkit-scrollbar {
 		display: none;
 	}
 
-	/* --- HEADERS & BUTTONS --- */
+	/* HEADERS & BUTTONS */
 	.create-section {
 		flex: 0 0 auto;
 	}
@@ -622,10 +940,19 @@
 		color: var(--text-secondary);
 	}
 	.empty-placeholder {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
 		text-align: center;
 		opacity: 0.5;
 		margin-top: 50px;
 		color: var(--text-primary);
+		font-size: 0.9rem;
+		line-height: 1.5;
+	}
+	.empty-icon {
+		font-size: 2rem;
 	}
 
 	.history-link-section {
@@ -646,7 +973,7 @@
 		box-sizing: border-box;
 	}
 
-	/* --- TRELLO-STYLE DRAG & DROP EFFECTS --- */
+	/* DRAG & DROP */
 	.being-dragged {
 		opacity: 0.4;
 		transform: scale(0.95);
@@ -654,9 +981,11 @@
 			opacity 0.2s,
 			transform 0.2s;
 	}
+	.touch-dragging {
+		opacity: 0.3;
+	}
 
 	.drop-placeholder {
-		/* height set dynamically via inline style to match dragged task */
 		min-height: 60px;
 		background: rgba(255, 118, 117, 0.15);
 		border: 2px dashed rgba(255, 118, 117, 0.5);
@@ -686,9 +1015,57 @@
 	[draggable='true'] {
 		cursor: grab;
 	}
-
 	[draggable='true']:active {
 		cursor: grabbing;
+	}
+
+	/* SWIPE ROW */
+	.swipe-row {
+		position: relative;
+		display: flex;
+		align-items: stretch;
+		border-radius: 16px;
+		overflow: hidden;
+	}
+
+	.swipe-actions {
+		/* Sits behind the card, revealed as card slides left */
+		flex-shrink: 0;
+		display: flex;
+		align-items: stretch;
+		overflow: hidden;
+		transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+		border-radius: 16px 0 0 16px;
+	}
+
+	.swipe-action-btn {
+		flex: 1;
+		min-width: 70px;
+		border: none;
+		color: white;
+		font-family: 'Poppins', sans-serif;
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		cursor: pointer;
+		padding: 0 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: filter 0.15s;
+		white-space: nowrap;
+	}
+	.swipe-action-btn:active {
+		filter: brightness(0.85);
+	}
+
+	.card-wrapper {
+		flex: 1;
+		min-width: 0;
+		transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+		/* Clip the card corners where the swipe actions are revealed */
+		border-radius: 16px;
 	}
 
 	/* ── MOBILE STYLES ── */
@@ -704,7 +1081,6 @@
 			box-sizing: border-box;
 		}
 
-		/* Mobile tab switcher */
 		.mobile-tabs {
 			display: flex;
 			background: var(--surface);
@@ -775,9 +1151,14 @@
 		}
 
 		.scroll-area {
-			max-height: calc(100vh - 280px);
-			-webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-			mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+			/* On mobile, don't restrict height — let the page scroll */
+			max-height: none;
+			overflow-y: visible;
+			-webkit-mask-image: none;
+			mask-image: none;
+			padding: 12px;
+			padding-bottom: 20px;
+			gap: 10px;
 		}
 
 		.big-create-btn {
@@ -798,6 +1179,22 @@
 
 		.history-card {
 			padding: 0 20px;
+		}
+
+		/* On mobile swipe rows need clean overflow for the slide to look right */
+		.swipe-row {
+			border-radius: 14px;
+		}
+
+		/* Hint text for swipe affordance in the empty state */
+		.empty-placeholder small {
+			opacity: 0.7;
+			font-size: 0.78rem;
+		}
+
+		/* Disable grab cursor on mobile */
+		[draggable='true'] {
+			cursor: default;
 		}
 	}
 </style>
