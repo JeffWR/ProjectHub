@@ -284,14 +284,17 @@
 
 	@media (max-width: 768px) {
 		.modal-backdrop {
-			align-items: flex-end;
-			padding: 0;
+			align-items: center;
+			justify-content: center;
+			padding: 16px;
+			box-sizing: border-box;
 		}
 		.modal-glass {
 			max-width: 100%;
-			border-radius: 24px 24px 0 0;
-			padding: 24px 20px calc(20px + env(safe-area-inset-bottom));
-			max-height: 92vh;
+			width: 100%;
+			border-radius: 20px;
+			padding: 24px 20px;
+			max-height: calc(100vh - 32px);
 			overflow-y: auto;
 			gap: 16px;
 		}

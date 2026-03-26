@@ -322,13 +322,19 @@
 	}
 
 	@media (max-width: 768px) {
+		:global(main) {
+			align-items: center !important;
+			justify-content: center !important;
+			padding: 16px 0 81px 0 !important; /* 16px top + 65px bottom nav */
+		}
+
 		.glass-panel {
-			width: calc(100vw - 24px);
-			max-width: 100%;
+			width: calc(100vw - 32px);
+			max-width: 420px;
 			aspect-ratio: auto;
-			min-height: 360px;
-			border-radius: 20px;
-			margin: 12px auto;
+			min-height: 380px;
+			border-radius: 24px;
+			margin: 0 auto;
 		}
 	}
 

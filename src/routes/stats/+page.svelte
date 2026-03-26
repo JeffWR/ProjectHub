@@ -16,6 +16,7 @@
 
 	// --- DATE NAVIGATION ---
 	let selectedDate = new Date();
+	let mobileStatsTab = 'overview';
 	const changeDate = (days) => {
 		const newD = new Date(selectedDate);
 		newD.setDate(newD.getDate() + days);
@@ -215,7 +216,8 @@
 </script>
 
 <div class="page-container">
-	<div class="dashboard-grid">
+	<!-- DESKTOP: full 3-col grid -->
+	<div class="dashboard-grid desktop-only">
 		<div class="column left-col">
 			<FocusWidget {weekData} todayFocus={stats.todayFocus} weekFocusHrs={stats.weekFocusHrs} />
 			<TaskWidget {weekData} todayTasks={stats.todayTasks} activeTasks={stats.activeTasks} />
@@ -232,9 +234,92 @@
 			<PriorityChart {lineGraphData} {maxTrendVal} {priorityPercents} />
 		</div>
 	</div>
+
+	<!-- MOBILE: summary + tabs + panels all inside page-container -->
+	<div class="mobile-root">
+		<!-- Summary strip -->
+		<div class="mobile-summary">
+			<div class="summary-pill">
+				<span class="summary-val">{stats.todayFocus}</span>
+				<span class="summary-lbl">Today</span>
+			</div>
+			<div class="summary-divider"></div>
+			<div class="summary-pill">
+				<span class="summary-val">{stats.weekFocusHrs}h</span>
+				<span class="summary-lbl">Week</span>
+			</div>
+			<div class="summary-divider"></div>
+			<div class="summary-pill">
+				<span class="summary-val">{stats.totalArchived}</span>
+				<span class="summary-lbl">Done</span>
+			</div>
+			<div class="summary-divider"></div>
+			<div class="summary-pill">
+				<span class="summary-val">{stats.totalHours}h</span>
+				<span class="summary-lbl">Total</span>
+			</div>
+		</div>
+
+		<!-- Tab switcher -->
+		<div class="mobile-tabs">
+			<button
+				class="mobile-tab"
+				class:active={mobileStatsTab === 'overview'}
+				on:click={() => (mobileStatsTab = 'overview')}>Overview</button
+			>
+			<button
+				class="mobile-tab"
+				class:active={mobileStatsTab === 'timeline'}
+				on:click={() => (mobileStatsTab = 'timeline')}>Timeline</button
+			>
+			<button
+				class="mobile-tab"
+				class:active={mobileStatsTab === 'charts'}
+				on:click={() => (mobileStatsTab = 'charts')}>Charts</button
+			>
+			<button
+				class="mobile-tab"
+				class:active={mobileStatsTab === 'history'}
+				on:click={() => (mobileStatsTab = 'history')}>History</button
+			>
+		</div>
+
+		<!-- Tab content — all panels are the same fixed height, scroll internally -->
+		<div class="mobile-panel" class:hidden={mobileStatsTab !== 'overview'}>
+			<div class="panel-scroll">
+				<FocusWidget {weekData} todayFocus={stats.todayFocus} weekFocusHrs={stats.weekFocusHrs} />
+				<TaskWidget {weekData} todayTasks={stats.todayTasks} activeTasks={stats.activeTasks} />
+				<Heatmap {heatmapData} {stats} />
+			</div>
+		</div>
+
+		<div class="mobile-panel" class:hidden={mobileStatsTab !== 'timeline'}>
+			<div class="panel-scroll panel-scroll--timeline">
+				<Timeline {selectedDate} {timelineSessions} onChangeDate={changeDate} />
+			</div>
+		</div>
+
+		<div class="mobile-panel" class:hidden={mobileStatsTab !== 'charts'}>
+			<div class="panel-scroll">
+				<div class="chart-card">
+					<RhythmChart {rhythmData} {maxRhythmVal} />
+				</div>
+				<div class="chart-card">
+					<PriorityChart {lineGraphData} {maxTrendVal} {priorityPercents} />
+				</div>
+			</div>
+		</div>
+
+		<div class="mobile-panel" class:hidden={mobileStatsTab !== 'history'}>
+			<div class="panel-scroll">
+				<HistoryList {archiveList} />
+			</div>
+		</div>
+	</div>
 </div>
 
 <style>
+	/* ── DESKTOP LAYOUT ── */
 	.page-container {
 		height: calc(100vh - 100px);
 		max-width: 1400px;
@@ -246,8 +331,16 @@
 		padding: 10px 0;
 	}
 
-	.dashboard-grid {
+	/* Mobile root hidden on desktop */
+	.mobile-root {
+		display: none;
+	}
+
+	.desktop-only {
 		display: grid;
+	}
+
+	.dashboard-grid {
 		grid-template-columns: 1.2fr 1.6fr 1.2fr;
 		gap: 15px;
 		flex: 1;
@@ -279,41 +372,210 @@
 		justify-content: space-between;
 	}
 
+	/* ── MOBILE BREAKPOINT ── */
 	@media (max-width: 768px) {
+		/* Shrink the outer container to just a wrapper */
 		.page-container {
 			height: auto;
-			min-height: calc(100vh - 65px);
 			overflow: visible;
-			padding: 10px 10px 20px 10px;
+			padding: 0;
+		}
+
+		/* Hide the desktop 3-col grid */
+		.desktop-only {
+			display: none !important;
+		}
+
+		/* Show the mobile root */
+		.mobile-root {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			padding: 12px 12px 24px 12px;
+			box-sizing: border-box;
+			/* Allow the page to scroll naturally */
+			overflow: visible;
+		}
+
+		/* ── Summary strip ── */
+		.mobile-summary {
+			display: flex;
+			align-items: center;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			padding: 14px 8px;
+			gap: 0;
+			flex-shrink: 0;
+		}
+
+		.summary-pill {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 3px;
+		}
+
+		.summary-val {
+			font-size: 1.3rem;
+			font-weight: 800;
+			color: var(--text-primary);
+			line-height: 1;
+		}
+
+		.summary-lbl {
+			font-size: 0.58rem;
+			font-weight: 600;
+			color: var(--text-muted);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.summary-divider {
+			width: 1px;
+			height: 30px;
+			background: var(--border);
+			flex-shrink: 0;
+		}
+
+		/* ── Tab switcher ── */
+		.mobile-tabs {
+			display: flex;
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 4px;
+			gap: 2px;
+			flex-shrink: 0;
+		}
+
+		.mobile-tab {
+			flex: 1;
+			background: transparent;
+			border: none;
+			color: var(--text-muted);
+			padding: 9px 4px;
+			border-radius: 10px;
+			font-family: 'Poppins', sans-serif;
+			font-size: 0.75rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: 0.2s;
+			white-space: nowrap;
+		}
+
+		.mobile-tab.active {
+			background: var(--surface-hover);
+			color: var(--text-primary);
+		}
+
+		/* ── Tab panels ── */
+
+		/* Every panel occupies the exact same fixed height */
+		.mobile-panel {
+			/* summary ~80px + tabs ~50px + gap ~32px + bottom nav 65px + breathing room */
+			height: calc(100vh - 260px);
+			min-height: 340px;
+			flex-shrink: 0;
+		}
+
+		/* Hidden panels are removed from layout but keep their size reserved */
+		.mobile-panel.hidden {
+			display: none;
+		}
+
+		/* Inner scroll wrapper — fills the panel, scrolls its own content */
+		.panel-scroll {
+			height: 100%;
+			overflow-y: auto;
+			overflow-x: hidden;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+			padding-bottom: 8px;
 			box-sizing: border-box;
 		}
 
-		.dashboard-grid {
+		.panel-scroll::-webkit-scrollbar {
+			display: none;
+		}
+
+		/* Timeline gets its own scroll behaviour — the component handles it internally */
+		.panel-scroll--timeline {
+			overflow: hidden;
+			gap: 0;
+		}
+
+		:global(.panel-scroll--timeline .stat-box) {
+			height: 100%;
+			flex: 1;
+		}
+
+		/* Chart cards give the flex:1 chart components a real explicit height */
+		.chart-card {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			padding: 16px;
+			height: 200px;
+			flex-shrink: 0;
 			display: flex;
 			flex-direction: column;
-			gap: 12px;
-			padding-bottom: 20px;
-			overflow: visible;
+			box-shadow: var(--shadow);
 		}
 
-		.column {
-			display: flex;
-			flex-direction: column;
-			gap: 12px;
-			padding-right: 0;
-			overflow: visible;
-			height: auto;
+		/* Reset the chart component's own stat-box so it fills the card cleanly */
+		:global(.chart-card .stat-box) {
+			background: transparent;
+			border: none;
+			border-radius: 0;
+			padding: 0;
+			box-shadow: none;
+			flex: 1;
+			min-height: 0;
 		}
 
-		.left-col,
-		.mid-col,
-		.right-col {
-			overflow: visible;
-			height: auto;
+		/* ── Width fixes ── */
+
+		/* Every panel and its direct stat-box children must be full width */
+		.mobile-panel,
+		.panel-scroll {
+			width: 100%;
+			box-sizing: border-box;
 		}
 
-		.mid-col {
-			overflow: visible;
+		:global(.mobile-panel .stat-box),
+		:global(.panel-scroll .stat-box) {
+			width: 100%;
+			box-sizing: border-box;
+			min-width: 0;
+		}
+
+		/* Timeline: force full width on the box and its inner scroll */
+		:global(.panel-scroll--timeline .stat-box),
+		:global(.panel-scroll--timeline .timeline-box) {
+			width: 100%;
+			box-sizing: border-box;
+		}
+
+		/* Heatmap: the grid is min-width:max-content (53 weeks), clip it to the box */
+		:global(.panel-scroll .heatmap-container) {
+			width: 100%;
+			overflow-x: auto;
+			box-sizing: border-box;
+		}
+
+		:global(.panel-scroll .heatmap-grid) {
+			min-width: unset;
+			width: max-content;
+		}
+
+		/* Prevent any chart SVG from blowing out its container */
+		:global(.panel-scroll svg) {
+			max-width: 100%;
 		}
 	}
 </style>
