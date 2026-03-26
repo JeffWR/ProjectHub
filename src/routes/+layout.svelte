@@ -215,6 +215,7 @@
 		background: var(--bg-gradient);
 		color: var(--text-primary);
 		height: 100vh;
+		/* overflow: hidden is fine on desktop only — mobile overrides below */
 		overflow: hidden;
 	}
 
@@ -358,6 +359,7 @@
 		justify-content: center;
 		align-items: center;
 		min-height: 0;
+		/* overflow: hidden only on desktop — mobile overrides to visible */
 		overflow: hidden;
 	}
 
@@ -369,7 +371,10 @@
 	/* ── MOBILE BREAKPOINT ── */
 	@media (max-width: 768px) {
 		:global(body) {
-			overflow: hidden;
+			/* Never lock body scroll on mobile — it traps content below the fold */
+			overflow-x: hidden;
+			overflow-y: auto;
+			height: auto;
 		}
 
 		.top-nav {
@@ -377,11 +382,12 @@
 		}
 
 		main {
-			/* Leave room for bottom nav */
+			/* Leave room for bottom nav — let content scroll naturally with the page */
 			padding-bottom: 65px;
 			align-items: flex-start;
-			overflow-y: auto;
-			overflow-x: hidden;
+			overflow: visible;
+			height: auto;
+			min-height: 0;
 		}
 
 		.bottom-nav {
