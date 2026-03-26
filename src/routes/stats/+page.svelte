@@ -1,249 +1,319 @@
 <script>
-    import { tasks } from '$lib/stores/tasks';
-    import { history } from '$lib/stores/history';
+	import { tasks } from '$lib/stores/tasks';
+	import { history } from '$lib/stores/history';
 
-    // Components
-    import FocusWidget from '$lib/components/stats/FocusWidget.svelte';
-    import TaskWidget from '$lib/components/stats/TaskWidget.svelte';
-    import HistoryList from '$lib/components/stats/HistoryList.svelte';
-    import Timeline from '$lib/components/stats/Timeline.svelte';
-    import Heatmap from '$lib/components/stats/Heatmap.svelte';
-    import RhythmChart from '$lib/components/stats/RhythmChart.svelte';
-    import PriorityChart from '$lib/components/stats/PriorityChart.svelte';
+	// Components
+	import FocusWidget from '$lib/components/stats/FocusWidget.svelte';
+	import TaskWidget from '$lib/components/stats/TaskWidget.svelte';
+	import HistoryList from '$lib/components/stats/HistoryList.svelte';
+	import Timeline from '$lib/components/stats/Timeline.svelte';
+	import Heatmap from '$lib/components/stats/Heatmap.svelte';
+	import RhythmChart from '$lib/components/stats/RhythmChart.svelte';
+	import PriorityChart from '$lib/components/stats/PriorityChart.svelte';
 
-    // Utilities
-    import { safeDate, getLocalDateStr, isSameDay } from '$lib/utils/statsUtils';
+	// Utilities
+	import { safeDate, getLocalDateStr, isSameDay } from '$lib/utils/statsUtils';
 
-    // --- DATE NAVIGATION ---
-    let selectedDate = new Date();
-    const changeDate = (days) => {
-        const newD = new Date(selectedDate);
-        newD.setDate(newD.getDate() + days);
-        selectedDate = newD;
-    };
+	// --- DATE NAVIGATION ---
+	let selectedDate = new Date();
+	const changeDate = (days) => {
+		const newD = new Date(selectedDate);
+		newD.setDate(newD.getDate() + days);
+		selectedDate = newD;
+	};
 
-    // --- DATA PROCESSING ---
-    let stats = { todayFocus: 0, weekFocusHrs: 0, todayTasks: 0, activeTasks: 0, totalHours: 0, avgPomo: 25, totalArchived: 0 };
-    let weekData = [];
-    let timelineSessions = []; 
-    let archiveList = [];
-    let heatmapData = []; 
-    let rhythmData = []; 
-    let lineGraphData = []; 
-    let priorityPercents = { High: 0, Medium: 0, Low: 0 };
-    let maxRhythmVal = 1;
-    let maxTrendVal = 1;
+	// --- DATA PROCESSING ---
+	let stats = {
+		todayFocus: 0,
+		weekFocusHrs: 0,
+		todayTasks: 0,
+		activeTasks: 0,
+		totalHours: 0,
+		avgPomo: 25,
+		totalArchived: 0
+	};
+	let weekData = [];
+	let timelineSessions = [];
+	let archiveList = [];
+	let heatmapData = [];
+	let rhythmData = [];
+	let lineGraphData = [];
+	let priorityPercents = { High: 0, Medium: 0, Low: 0 };
+	let maxRhythmVal = 1;
+	let maxTrendVal = 1;
 
-    $: {
-        const safeHistory = Array.isArray($history) ? $history : [];
-        const safeTasks = Array.isArray($tasks) ? $tasks : [];
-        const allArchived = safeTasks.filter(t => t.status === 'archived');
+	$: {
+		const safeHistory = Array.isArray($history) ? $history : [];
+		const safeTasks = Array.isArray($tasks) ? $tasks : [];
+		const allArchived = safeTasks.filter((t) => t.status === 'archived');
 
-        const currentDay = new Date(selectedDate);
-        const weekStart = new Date(currentDay);
-        weekStart.setDate(currentDay.getDate() - currentDay.getDay()); // Start on Sunday
-        weekStart.setHours(0,0,0,0);
+		const currentDay = new Date(selectedDate);
+		const weekStart = new Date(currentDay);
+		weekStart.setDate(currentDay.getDate() - currentDay.getDay()); // Start on Sunday
+		weekStart.setHours(0, 0, 0, 0);
 
-        const todaysSessions = safeHistory.filter(h => isSameDay(safeDate(h.date), currentDay));
-        const weekSessions = safeHistory.filter(h => {
-            const d = safeDate(h.date);
-            return d && d >= weekStart && d < new Date(weekStart.getTime() + 7 * 86400000);
-        });
+		const todaysSessions = safeHistory.filter((h) => isSameDay(safeDate(h.date), currentDay));
+		const weekSessions = safeHistory.filter((h) => {
+			const d = safeDate(h.date);
+			return d && d >= weekStart && d < new Date(weekStart.getTime() + 7 * 86400000);
+		});
 
-        // 1. TIMELINE DATA
-        const PIXELS_PER_HOUR = 80;
-        timelineSessions = todaysSessions.map(session => {
-            const endD = safeDate(session.date);
-            if (!endD) return null;
-            const duration = session.duration || 25;
-            // Use recorded startedAt if available; fall back to computing from end - duration
-            const startD = session.startedAt
-                ? safeDate(session.startedAt)
-                : new Date(endD.getTime() - duration * 60000);
-            if (!startD) return null;
-            const startMinutes = (startD.getHours() * 60) + startD.getMinutes();
-            const timeRange = `${startD.getHours()}:${startD.getMinutes().toString().padStart(2,'0')} - ${endD.getHours()}:${endD.getMinutes().toString().padStart(2,'0')}`;
+		// 1. TIMELINE DATA
+		const PIXELS_PER_HOUR = 80;
+		timelineSessions = todaysSessions
+			.map((session) => {
+				const endD = safeDate(session.date);
+				if (!endD) return null;
+				const duration = session.duration || 25;
+				// Use recorded startedAt if available; fall back to computing from end - duration
+				const startD = session.startedAt
+					? safeDate(session.startedAt)
+					: new Date(endD.getTime() - duration * 60000);
+				if (!startD) return null;
+				const startMinutes = startD.getHours() * 60 + startD.getMinutes();
+				const timeRange = `${startD.getHours()}:${startD.getMinutes().toString().padStart(2, '0')} - ${endD.getHours()}:${endD.getMinutes().toString().padStart(2, '0')}`;
 
-            return {
-                ...session,
-                top: (startMinutes / 60) * PIXELS_PER_HOUR,
-                height: (duration / 60) * PIXELS_PER_HOUR,
-                timeRange,
-                label: session.taskTitle || 'Focus Session'
-            };
-        }).filter(Boolean);
+				return {
+					...session,
+					top: (startMinutes / 60) * PIXELS_PER_HOUR,
+					height: (duration / 60) * PIXELS_PER_HOUR,
+					timeRange,
+					label: session.taskTitle || 'Focus Session'
+				};
+			})
+			.filter(Boolean);
 
-        // 2. HEATMAP DATA
-        const historyMap = {};
-        safeHistory.forEach(h => {
-            const d = safeDate(h.date);
-            if(d) {
-                const dateKey = getLocalDateStr(d);
-                historyMap[dateKey] = (historyMap[dateKey] || 0) + (h.duration || 25);
-            }
-        });
+		// 2. HEATMAP DATA
+		const historyMap = {};
+		safeHistory.forEach((h) => {
+			const d = safeDate(h.date);
+			if (d) {
+				const dateKey = getLocalDateStr(d);
+				historyMap[dateKey] = (historyMap[dateKey] || 0) + (h.duration || 25);
+			}
+		});
 
-        let tempHeatmap = [];
-        const anchorDate = new Date(); 
-        const dayOfWeek = anchorDate.getDay(); 
-        const startHeat = new Date(anchorDate);
-        startHeat.setDate(anchorDate.getDate() - dayOfWeek - (26 * 7)); 
+		let tempHeatmap = [];
+		const anchorDate = new Date();
+		const dayOfWeek = anchorDate.getDay();
+		const startHeat = new Date(anchorDate);
+		startHeat.setDate(anchorDate.getDate() - dayOfWeek - 26 * 7);
 
-        for (let w = 0; w < 53; w++) {
-            let week = [];
-            for (let d = 0; d < 7; d++) {
-                const dateStr = getLocalDateStr(startHeat);
-                const minutes = historyMap[dateStr] || 0;
-                const isToday = isSameDay(startHeat, anchorDate);
-                
-                let intensity = 0;
-                if (minutes > 0) intensity = 1;
-                if (minutes >= 30) intensity = 2;
-                if (minutes >= 60) intensity = 3;
-                if (minutes >= 120) intensity = 4;
+		for (let w = 0; w < 53; w++) {
+			let week = [];
+			for (let d = 0; d < 7; d++) {
+				const dateStr = getLocalDateStr(startHeat);
+				const minutes = historyMap[dateStr] || 0;
+				const isToday = isSameDay(startHeat, anchorDate);
 
-                week.push({ intensity, date: dateStr, minutes, isToday });
-                startHeat.setDate(startHeat.getDate() + 1);
-            }
-            tempHeatmap.push(week);
-        }
-        heatmapData = tempHeatmap;
+				let intensity = 0;
+				if (minutes > 0) intensity = 1;
+				if (minutes >= 30) intensity = 2;
+				if (minutes >= 60) intensity = 3;
+				if (minutes >= 120) intensity = 4;
 
-        // 3. RHYTHM & TRENDS
-        let tempRhythm = [];
-        let rMax = 0;
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const done = allArchived.filter(t => isSameDay(safeDate(t.completedAt || t.createdAt), d)).length;
-            const mins = safeHistory.filter(h => isSameDay(safeDate(h.date), d)).reduce((a,b)=>a+(b.duration||0),0);
-            const hrs = parseFloat((mins/60).toFixed(1));
-            const daySessions = safeHistory.filter(h => isSameDay(safeDate(h.date), d));
-            let avgH = 0;
-            if (daySessions.length) avgH = daySessions.reduce((a,h) => a + new Date(h.date).getHours(), 0) / daySessions.length;
-            
-            tempRhythm.push({ label: d.toLocaleDateString('en-US', {weekday:'short'}), tasks: done, hours: hrs, time: avgH });
-            rMax = Math.max(rMax, done, hrs);
-        }
-        rhythmData = tempRhythm;
-        maxRhythmVal = rMax > 0 ? rMax : 5;
+				week.push({ intensity, date: dateStr, minutes, isToday });
+				startHeat.setDate(startHeat.getDate() + 1);
+			}
+			tempHeatmap.push(week);
+		}
+		heatmapData = tempHeatmap;
 
-        // 4. PRIORITY LINE GRAPH
-        let tempLine = [];
-        let tMax = 0;
-        let pCounts = { High: 0, Medium: 0, Low: 0 }; 
+		// 3. RHYTHM & TRENDS
+		let tempRhythm = [];
+		let rMax = 0;
+		for (let i = 6; i >= 0; i--) {
+			const d = new Date();
+			d.setDate(d.getDate() - i);
+			const done = allArchived.filter((t) =>
+				isSameDay(safeDate(t.completedAt || t.createdAt), d)
+			).length;
+			const mins = safeHistory
+				.filter((h) => isSameDay(safeDate(h.date), d))
+				.reduce((a, b) => a + (b.duration || 0), 0);
+			const hrs = parseFloat((mins / 60).toFixed(1));
+			const daySessions = safeHistory.filter((h) => isSameDay(safeDate(h.date), d));
+			let avgH = 0;
+			if (daySessions.length)
+				avgH =
+					daySessions.reduce((a, h) => a + new Date(h.date).getHours(), 0) / daySessions.length;
 
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const dailyTasks = allArchived.filter(t => isSameDay(safeDate(t.completedAt), d));
-            const counts = { High: 0, Medium: 0, Low: 0 };
-            
-            dailyTasks.forEach(t => {
-                const p = (t.priority || 'Medium').charAt(0).toUpperCase() + (t.priority || 'Medium').slice(1).toLowerCase();
-                if (counts[p] !== undefined) {
-                    counts[p]++;
-                    pCounts[p]++;
-                }
-            });
-            tempLine.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), ...counts });
-            tMax = Math.max(tMax, counts.High, counts.Medium, counts.Low);
-        }
-        lineGraphData = tempLine;
-        maxTrendVal = tMax > 0 ? tMax : 3;
+			tempRhythm.push({
+				label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+				tasks: done,
+				hours: hrs,
+				time: avgH
+			});
+			rMax = Math.max(rMax, done, hrs);
+		}
+		rhythmData = tempRhythm;
+		maxRhythmVal = rMax > 0 ? rMax : 5;
 
-        const totalP = pCounts.High + pCounts.Medium + pCounts.Low;
-        priorityPercents = {
-            High: totalP ? Math.round((pCounts.High / totalP) * 100) : 0,
-            Medium: totalP ? Math.round((pCounts.Medium / totalP) * 100) : 0,
-            Low: totalP ? Math.round((pCounts.Low / totalP) * 100) : 0
-        };
+		// 4. PRIORITY LINE GRAPH
+		let tempLine = [];
+		let tMax = 0;
+		let pCounts = { High: 0, Medium: 0, Low: 0 };
 
-        // 5. STATS SUMMARY & WEEK DATA
-        const totalMins = safeHistory.reduce((a,b)=>a+(b.duration||0), 0);
-        stats = {
-            todayFocus: todaysSessions.length,
-            weekFocusHrs: (weekSessions.reduce((a,b)=>a+(b.duration||0), 0) / 60).toFixed(1),
-            todayTasks: allArchived.filter(t => isSameDay(safeDate(t.completedAt), currentDay)).length,
-            activeTasks: safeTasks.filter(t => t.status === 'inprogress').length,
-            totalHours: (totalMins/60).toFixed(0),
-            avgPomo: safeHistory.length ? Math.round(totalMins / safeHistory.length) : 25,
-            totalArchived: allArchived.length
-        };
+		for (let i = 6; i >= 0; i--) {
+			const d = new Date();
+			d.setDate(d.getDate() - i);
+			const dailyTasks = allArchived.filter((t) => isSameDay(safeDate(t.completedAt), d));
+			const counts = { High: 0, Medium: 0, Low: 0 };
 
-        weekData = Array(7).fill(0).map((_, i) => {
-            const d = new Date(weekStart);
-            d.setDate(d.getDate() + i);
-            return {
-                label: d.toLocaleDateString('en-US', { weekday: 'short' }),
-                isToday: isSameDay(d, currentDay),
-                val: weekSessions.filter(s => isSameDay(safeDate(s.date), d)).length,
-                tasks: allArchived.filter(t => isSameDay(safeDate(t.completedAt), d)).length
-            };
-        });
-        
-        archiveList = allArchived.reverse().map(t => ({
-            ...t, dateStr: safeDate(t.completedAt || t.createdAt)?.toLocaleDateString() || 'Unknown'
-        }));
-    }
+			dailyTasks.forEach((t) => {
+				const p =
+					(t.priority || 'Medium').charAt(0).toUpperCase() +
+					(t.priority || 'Medium').slice(1).toLowerCase();
+				if (counts[p] !== undefined) {
+					counts[p]++;
+					pCounts[p]++;
+				}
+			});
+			tempLine.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), ...counts });
+			tMax = Math.max(tMax, counts.High, counts.Medium, counts.Low);
+		}
+		lineGraphData = tempLine;
+		maxTrendVal = tMax > 0 ? tMax : 3;
+
+		const totalP = pCounts.High + pCounts.Medium + pCounts.Low;
+		priorityPercents = {
+			High: totalP ? Math.round((pCounts.High / totalP) * 100) : 0,
+			Medium: totalP ? Math.round((pCounts.Medium / totalP) * 100) : 0,
+			Low: totalP ? Math.round((pCounts.Low / totalP) * 100) : 0
+		};
+
+		// 5. STATS SUMMARY & WEEK DATA
+		const totalMins = safeHistory.reduce((a, b) => a + (b.duration || 0), 0);
+		stats = {
+			todayFocus: todaysSessions.length,
+			weekFocusHrs: (weekSessions.reduce((a, b) => a + (b.duration || 0), 0) / 60).toFixed(1),
+			todayTasks: allArchived.filter((t) => isSameDay(safeDate(t.completedAt), currentDay)).length,
+			activeTasks: safeTasks.filter((t) => t.status === 'inprogress').length,
+			totalHours: (totalMins / 60).toFixed(0),
+			avgPomo: safeHistory.length ? Math.round(totalMins / safeHistory.length) : 25,
+			totalArchived: allArchived.length
+		};
+
+		weekData = Array(7)
+			.fill(0)
+			.map((_, i) => {
+				const d = new Date(weekStart);
+				d.setDate(d.getDate() + i);
+				return {
+					label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+					isToday: isSameDay(d, currentDay),
+					val: weekSessions.filter((s) => isSameDay(safeDate(s.date), d)).length,
+					tasks: allArchived.filter((t) => isSameDay(safeDate(t.completedAt), d)).length
+				};
+			});
+
+		archiveList = allArchived.reverse().map((t) => ({
+			...t,
+			dateStr: safeDate(t.completedAt || t.createdAt)?.toLocaleDateString() || 'Unknown'
+		}));
+	}
 </script>
 
 <div class="page-container">
-    <div class="dashboard-grid">
+	<div class="dashboard-grid">
+		<div class="column left-col">
+			<FocusWidget {weekData} todayFocus={stats.todayFocus} weekFocusHrs={stats.weekFocusHrs} />
+			<TaskWidget {weekData} todayTasks={stats.todayTasks} activeTasks={stats.activeTasks} />
+			<HistoryList {archiveList} />
+		</div>
 
-        <div class="column left-col">
-            <FocusWidget {weekData} todayFocus={stats.todayFocus} weekFocusHrs={stats.weekFocusHrs} />
-            <TaskWidget {weekData} todayTasks={stats.todayTasks} activeTasks={stats.activeTasks} />
-            <HistoryList {archiveList} />
-        </div>
+		<div class="column mid-col">
+			<Timeline {selectedDate} {timelineSessions} onChangeDate={changeDate} />
+		</div>
 
-        <div class="column mid-col">
-            <Timeline 
-                {selectedDate} 
-                {timelineSessions} 
-                onChangeDate={changeDate} 
-            />
-        </div>
-
-        <div class="column right-col">
-            <Heatmap {heatmapData} {stats} />
-            <RhythmChart {rhythmData} {maxRhythmVal} />
-            <PriorityChart 
-                {lineGraphData} 
-                {maxTrendVal} 
-                {priorityPercents} 
-            />
-        </div>
-    </div>
+		<div class="column right-col">
+			<Heatmap {heatmapData} {stats} />
+			<RhythmChart {rhythmData} {maxRhythmVal} />
+			<PriorityChart {lineGraphData} {maxTrendVal} {priorityPercents} />
+		</div>
+	</div>
 </div>
 
 <style>
-    .page-container {
-        height: calc(100vh - 100px);
-        max-width: 1400px; margin: 0 auto;
-        display: flex; flex-direction: column;
-        color: var(--text-primary); overflow: hidden;
-        padding: 10px 0;
-    }
+	.page-container {
+		height: calc(100vh - 100px);
+		max-width: 1400px;
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		color: var(--text-primary);
+		overflow: hidden;
+		padding: 10px 0;
+	}
 
-    .dashboard-grid {
-        display: grid; grid-template-columns: 1.2fr 1.6fr 1.2fr;
-        gap: 15px; flex: 1; min-height: 0; padding-bottom: 20px; 
-    }
-    
-    .column {
-        display: flex; flex-direction: column; gap: 15px;
-        padding-right: 5px;
-    }
-    .left-col {
-        overflow: hidden; /* No scrolling on left column */
-    }
-    .mid-col {
-        overflow-y: auto; /* Timeline needs scrolling */
-        scrollbar-width: none;
-    }
-    .mid-col::-webkit-scrollbar { display: none; }
-    .right-col {
-        height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
-    }
+	.dashboard-grid {
+		display: grid;
+		grid-template-columns: 1.2fr 1.6fr 1.2fr;
+		gap: 15px;
+		flex: 1;
+		min-height: 0;
+		padding-bottom: 20px;
+	}
+
+	.column {
+		display: flex;
+		flex-direction: column;
+		gap: 15px;
+		padding-right: 5px;
+	}
+	.left-col {
+		overflow: hidden;
+	}
+	.mid-col {
+		overflow-y: auto;
+		scrollbar-width: none;
+	}
+	.mid-col::-webkit-scrollbar {
+		display: none;
+	}
+	.right-col {
+		height: 100%;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+	}
+
+	@media (max-width: 768px) {
+		.page-container {
+			height: auto;
+			min-height: calc(100vh - 65px);
+			overflow: visible;
+			padding: 10px 10px 20px 10px;
+			box-sizing: border-box;
+		}
+
+		.dashboard-grid {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			padding-bottom: 20px;
+			overflow: visible;
+		}
+
+		.column {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			padding-right: 0;
+			overflow: visible;
+			height: auto;
+		}
+
+		.left-col,
+		.mid-col,
+		.right-col {
+			overflow: visible;
+			height: auto;
+		}
+
+		.mid-col {
+			overflow: visible;
+		}
+	}
 </style>
