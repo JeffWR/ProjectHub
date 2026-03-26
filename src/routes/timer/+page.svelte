@@ -128,8 +128,9 @@
 	const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 	$: strokeDashoffset = CIRCUMFERENCE - (holdProgress / 100) * CIRCUMFERENCE;
 
-	function startHold() {
+	function startHold(e) {
 		if (!$timer.isRunning) return;
+		if (e && e.cancelable) e.preventDefault();
 		isHolding = true;
 		holdStartTime = Date.now();
 		function loop() {
@@ -160,7 +161,7 @@
 		on:mousedown={$timer.isRunning && $timer.mode !== 'pomodoro' ? startHold : null}
 		on:mouseup={cancelHold}
 		on:mouseleave={cancelHold}
-		on:touchstart|preventDefault={$timer.isRunning && $timer.mode !== 'pomodoro' ? startHold : null}
+		on:touchstart={$timer.isRunning && $timer.mode !== 'pomodoro' ? startHold : null}
 		on:touchend={cancelHold}
 		on:contextmenu|preventDefault
 		in:fly={{ y: 20, duration: 400 }}
