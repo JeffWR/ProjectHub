@@ -205,6 +205,16 @@
 	// DOM refs for the two floating drop zone elements
 	let dropZoneEls = {};
 
+	// Double-tap detection: track last tap time per task id
+	let lastTapTime = {};
+	const DOUBLE_TAP_MS = 300;
+
+	// Returns true if the touch ended on a button or inside one
+	function isTappingButton(e) {
+		const el = e.target;
+		return !!el.closest('button');
+	}
+
 	function isMobile() {
 		return window.innerWidth <= 768;
 	}
@@ -606,20 +616,27 @@
 									onTouchDragEnd(e, task.id);
 								} else {
 									onSwipeTouchEnd(e, task.id);
-									// Tap with no swipe = open detail
-									if (!swipeActive[task.id] && (swipeState[task.id] || 0) < 10) {
-										openTaskDetail(task);
+									// Double-tap to edit; skip if touch landed on a button
+									if (
+										!swipeActive[task.id] &&
+										(swipeState[task.id] || 0) < 10 &&
+										!isTappingButton(e)
+									) {
+										const now = Date.now();
+										const last = lastTapTime[task.id] || 0;
+										if (now - last < DOUBLE_TAP_MS) {
+											openTaskDetail(task);
+											lastTapTime[task.id] = 0;
+										} else {
+											lastTapTime[task.id] = now;
+										}
 									}
 									touchDragId = null;
 								}
 							}}
-							on:click={() => {
-								// Desktop double-click handled separately; single click on mobile already done via touchend
-								if (!isMobile()) return;
-							}}
 							on:dblclick={() => openTaskDetail(task)}
 							role="listitem"
-							title="Swipe left for actions · Double-click to edit"
+							title="Double-tap to edit · Swipe left for actions"
 						>
 							<TaskItem {task} />
 						</div>
@@ -713,15 +730,26 @@
 								onTouchDragEnd(e, task.id);
 							} else {
 								onSwipeTouchEnd(e, task.id);
-								if (!swipeActive[task.id] && (swipeState[task.id] || 0) < 10) {
-									openTaskDetail(task);
+								if (
+									!swipeActive[task.id] &&
+									(swipeState[task.id] || 0) < 10 &&
+									!isTappingButton(e)
+								) {
+									const now = Date.now();
+									const last = lastTapTime[task.id] || 0;
+									if (now - last < DOUBLE_TAP_MS) {
+										openTaskDetail(task);
+										lastTapTime[task.id] = 0;
+									} else {
+										lastTapTime[task.id] = now;
+									}
 								}
 								touchDragId = null;
 							}
 						}}
 						on:dblclick={() => openTaskDetail(task)}
 						role="listitem"
-						title="Swipe left for actions · Double-click to edit"
+						title="Double-tap to edit · Swipe left for actions"
 					>
 						<TaskItem {task} showProgress={true} isHero={index === 0} />
 					</div>
@@ -821,15 +849,26 @@
 									onTouchDragEnd(e, task.id);
 								} else {
 									onSwipeTouchEnd(e, task.id);
-									if (!swipeActive[task.id] && (swipeState[task.id] || 0) < 10) {
-										openTaskDetail(task);
+									if (
+										!swipeActive[task.id] &&
+										(swipeState[task.id] || 0) < 10 &&
+										!isTappingButton(e)
+									) {
+										const now = Date.now();
+										const last = lastTapTime[task.id] || 0;
+										if (now - last < DOUBLE_TAP_MS) {
+											openTaskDetail(task);
+											lastTapTime[task.id] = 0;
+										} else {
+											lastTapTime[task.id] = now;
+										}
 									}
 									touchDragId = null;
 								}
 							}}
 							on:dblclick={() => openTaskDetail(task)}
 							role="listitem"
-							title="Swipe left for actions · Double-click to edit"
+							title="Double-tap to edit · Swipe left for actions"
 						>
 							<TaskItem {task} />
 						</div>
