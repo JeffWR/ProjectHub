@@ -5,6 +5,7 @@
 	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import { Plus, LayoutList } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 
 	let showModal = false;
 	let selectedTask = null;
@@ -195,6 +196,13 @@
 	let touchAutoScrollInterval = null;
 	let touchLastY = 0;
 
+	// Which column the dragged task lives in — used to derive the two drop zones
+	let touchDragSourceColumn = null;
+	// Which drop zone is currently highlighted ('todo'|'inprogress'|'review'|null)
+	let touchHoveredZone = null;
+	// Svelte-reactive flag — true while a touch clone is live
+	let isTouchDragging = false;
+
 	function isMobile() {
 		return window.innerWidth <= 768;
 	}
@@ -210,6 +218,10 @@
 		touchStartX = touch.clientX;
 		touchStartY = touch.clientY;
 		touchLastY = touch.clientY;
+
+		// Remember which column this task comes from
+		const task = $tasks.find((t) => t.id === taskId);
+		touchDragSourceColumn = task ? task.status : null;
 	}
 
 	function onTouchDragMove(e, taskId) {
@@ -248,6 +260,7 @@
 			touchClone.style.top = touch.clientY - touchOffsetY + 'px';
 			document.body.appendChild(touchClone);
 
+			isTouchDragging = true;
 			startTouchAutoScroll();
 		} else {
 			touchClone.style.left = touch.clientX - touchOffsetX + 'px';
@@ -259,20 +272,31 @@
 		const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
 		touchClone.style.display = '';
 
-		if (elBelow) {
-			// Which column?
-			const colEl = elBelow.closest('[data-column]');
-			touchDropColumn = colEl ? colEl.dataset.column : null;
+		// Check if finger is over one of the floating drop zones
+		const zoneEl = elBelow ? elBelow.closest('[data-drop-zone]') : null;
+		if (zoneEl) {
+			touchHoveredZone = zoneEl.dataset.dropZone;
+			touchDropColumn = touchHoveredZone;
+			touchDropTargetId = null;
+			touchInsertBefore = false;
+		} else {
+			touchHoveredZone = null;
 
-			// Which task card?
-			const cardEl = elBelow.closest('[data-task-id]');
-			if (cardEl && cardEl.dataset.taskId !== taskId) {
-				const rect = cardEl.getBoundingClientRect();
-				touchDropTargetId = cardEl.dataset.taskId;
-				touchInsertBefore = touch.clientY < rect.top + rect.height / 2;
-			} else {
-				touchDropTargetId = null;
-				touchInsertBefore = false;
+			if (elBelow) {
+				// Which column?
+				const colEl = elBelow.closest('[data-column]');
+				touchDropColumn = colEl ? colEl.dataset.column : null;
+
+				// Which task card?
+				const cardEl = elBelow.closest('[data-task-id]');
+				if (cardEl && cardEl.dataset.taskId !== taskId) {
+					const rect = cardEl.getBoundingClientRect();
+					touchDropTargetId = cardEl.dataset.taskId;
+					touchInsertBefore = touch.clientY < rect.top + rect.height / 2;
+				} else {
+					touchDropTargetId = null;
+					touchInsertBefore = false;
+				}
 			}
 		}
 	}
@@ -285,6 +309,7 @@
 		if (touchClone) {
 			document.body.removeChild(touchClone);
 			touchClone = null;
+			isTouchDragging = false;
 
 			// Commit the drop
 			if (touchDropColumn) {
@@ -304,7 +329,7 @@
 						moveTask(taskId, targetTask.status, insertIndex);
 					}
 				} else {
-					// Dropped on empty column area
+					// Dropped on floating zone or empty column area
 					moveTask(taskId, touchDropColumn);
 				}
 			}
@@ -315,7 +340,21 @@
 		touchDropColumn = null;
 		touchDropTargetId = null;
 		touchInsertBefore = false;
+		touchDragSourceColumn = null;
+		touchHoveredZone = null;
+		isTouchDragging = false;
 	}
+
+	// Derive the two target drop zones for the currently dragged task
+	$: touchDropZones = (() => {
+		if (!touchDragSourceColumn) return [];
+		const all = [
+			{ status: 'todo', label: 'To Do', icon: '📋' },
+			{ status: 'inprogress', label: 'In Focus', icon: '🎯' },
+			{ status: 'review', label: 'Review', icon: '✅' }
+		];
+		return all.filter((z) => z.status !== touchDragSourceColumn);
+	})();
 
 	function startTouchAutoScroll() {
 		touchAutoScrollInterval = setInterval(() => {
@@ -805,6 +844,29 @@
 	</div>
 </div>
 
+<!-- ── MOBILE FLOATING DROP ZONES (shown while touch-dragging) ── -->
+{#if isTouchDragging && touchDropZones.length > 0}
+	<div
+		class="touch-drop-overlay"
+		in:fly={{ y: 40, duration: 220 }}
+		out:fly={{ y: 40, duration: 160 }}
+	>
+		{#each touchDropZones as zone}
+			<div
+				class="touch-drop-zone"
+				class:hovered={touchHoveredZone === zone.status}
+				data-drop-zone={zone.status}
+			>
+				<span class="tdz-icon">{zone.icon}</span>
+				<span class="tdz-label">{zone.label}</span>
+				{#if touchHoveredZone === zone.status}
+					<span class="tdz-release">Release to move</span>
+				{/if}
+			</div>
+		{/each}
+	</div>
+{/if}
+
 <style>
 	/* Hide mobile-only elements on desktop */
 	.mobile-tabs {
@@ -1196,5 +1258,64 @@
 		[draggable='true'] {
 			cursor: default;
 		}
+	}
+
+	/* ── MOBILE FLOATING DROP ZONES ── */
+	.touch-drop-overlay {
+		position: fixed;
+		bottom: 75px; /* sit just above the bottom nav */
+		left: 12px;
+		right: 12px;
+		z-index: 10000;
+		display: flex;
+		gap: 10px;
+		pointer-events: none; /* let touch events pass through to elementFromPoint */
+	}
+
+	.touch-drop-zone {
+		flex: 1;
+		min-height: 80px;
+		border-radius: 18px;
+		border: 2px dashed rgba(255, 255, 255, 0.35);
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		transition:
+			background 0.18s ease,
+			border-color 0.18s ease,
+			transform 0.18s ease;
+		pointer-events: none;
+	}
+
+	.touch-drop-zone.hovered {
+		background: rgba(255, 255, 255, 0.22);
+		border-color: white;
+		border-style: solid;
+		transform: scale(1.04);
+	}
+
+	.tdz-icon {
+		font-size: 1.6rem;
+		line-height: 1;
+	}
+
+	.tdz-label {
+		font-size: 0.78rem;
+		font-weight: 700;
+		color: rgba(255, 255, 255, 0.9);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.tdz-release {
+		font-size: 0.65rem;
+		color: rgba(255, 255, 255, 0.7);
+		font-weight: 600;
+		margin-top: 2px;
 	}
 </style>
