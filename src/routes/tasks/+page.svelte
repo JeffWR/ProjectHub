@@ -202,6 +202,8 @@
 	let touchHoveredZone = null;
 	// Svelte-reactive flag — true while a touch clone is live
 	let isTouchDragging = false;
+	// DOM refs for the two floating drop zone elements
+	let dropZoneEls = {};
 
 	function isMobile() {
 		return window.innerWidth <= 768;
@@ -267,27 +269,39 @@
 			touchClone.style.top = touch.clientY - touchOffsetY + 'px';
 		}
 
-		// Determine which column and task the finger is over
-		touchClone.style.display = 'none';
-		const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-		touchClone.style.display = '';
+		// ── 1. Check floating drop zones first (manual hit-test, avoids pointer-events:none issue) ──
+		let hitZone = null;
+		for (const [status, el] of Object.entries(dropZoneEls)) {
+			if (!el) continue;
+			const r = el.getBoundingClientRect();
+			if (
+				touch.clientX >= r.left &&
+				touch.clientX <= r.right &&
+				touch.clientY >= r.top &&
+				touch.clientY <= r.bottom
+			) {
+				hitZone = status;
+				break;
+			}
+		}
 
-		// Check if finger is over one of the floating drop zones
-		const zoneEl = elBelow ? elBelow.closest('[data-drop-zone]') : null;
-		if (zoneEl) {
-			touchHoveredZone = zoneEl.dataset.dropZone;
-			touchDropColumn = touchHoveredZone;
+		if (hitZone) {
+			touchHoveredZone = hitZone;
+			touchDropColumn = hitZone;
 			touchDropTargetId = null;
 			touchInsertBefore = false;
 		} else {
 			touchHoveredZone = null;
 
+			// ── 2. Fall back to elementFromPoint for in-column card targeting ──
+			touchClone.style.display = 'none';
+			const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+			touchClone.style.display = '';
+
 			if (elBelow) {
-				// Which column?
 				const colEl = elBelow.closest('[data-column]');
 				touchDropColumn = colEl ? colEl.dataset.column : null;
 
-				// Which task card?
 				const cardEl = elBelow.closest('[data-task-id]');
 				if (cardEl && cardEl.dataset.taskId !== taskId) {
 					const rect = cardEl.getBoundingClientRect();
@@ -856,6 +870,7 @@
 				class="touch-drop-zone"
 				class:hovered={touchHoveredZone === zone.status}
 				data-drop-zone={zone.status}
+				bind:this={dropZoneEls[zone.status]}
 			>
 				<span class="tdz-icon">{zone.icon}</span>
 				<span class="tdz-label">{zone.label}</span>
