@@ -985,10 +985,10 @@
 		overflow-x: hidden;
 		scrollbar-width: none;
 		-ms-overflow-style: none;
-		-webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-		mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+		-webkit-mask-image: linear-gradient(to bottom, black 92%, transparent 100%);
+		mask-image: linear-gradient(to bottom, black 92%, transparent 100%);
 		padding: 20px;
-		padding-bottom: 40px;
+		padding-bottom: 60px;
 		display: flex;
 		flex-direction: column;
 		gap: 15px;
@@ -1141,7 +1141,8 @@
 		display: flex;
 		align-items: stretch;
 		border-radius: 16px;
-		overflow: hidden;
+		/* overflow visible on desktop so card bottom (progress bar, shadow) is never clipped */
+		overflow: visible;
 	}
 
 	.swipe-actions {
@@ -1300,6 +1301,7 @@
 		/* On mobile swipe rows need clean overflow for the slide to look right */
 		.swipe-row {
 			border-radius: 14px;
+			overflow: hidden;
 		}
 
 		/* Hint text for swipe affordance in the empty state */

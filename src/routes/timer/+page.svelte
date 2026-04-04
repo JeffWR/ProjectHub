@@ -417,12 +417,27 @@
 
 	@media (max-width: 768px) {
 		.task-pill {
-			font-size: 0.78rem;
-			padding: 6px 12px;
-			max-width: 85%;
+			font-size: 0.62rem;
+			padding: 4px 10px;
+			/* shrink to content, never fill the whole panel */
+			max-width: 58%;
+			width: fit-content;
+			align-self: center;
+			/* allow the task title to wrap instead of compressing */
+			flex-wrap: wrap;
+			justify-content: center;
+			border-radius: 10px;
+			margin-bottom: 12px;
+			gap: 4px;
 		}
 		.task-title {
-			max-width: 200px;
+			/* let title wrap on narrow screens */
+			max-width: 140px;
+			white-space: normal;
+			text-overflow: clip;
+			overflow: visible;
+			text-align: center;
+			line-height: 1.3;
 		}
 		.controls {
 			margin-bottom: 20px;
@@ -470,6 +485,8 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		vertical-align: bottom;
+		font-size: inherit;
+		font-weight: inherit;
 	}
 	.active-dot {
 		color: #4caf50;

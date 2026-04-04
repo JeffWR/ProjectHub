@@ -104,10 +104,12 @@
 		background: white;
 		border-radius: 16px;
 		padding: 18px;
+		padding-bottom: 20px;
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 		cursor: grab;
 		position: relative;
 		border-left: 4px solid var(--priority-color);
+		overflow: visible;
 		transition:
 			transform 0.1s,
 			box-shadow 0.1s;
@@ -245,6 +247,7 @@
 	.progress-section {
 		margin-top: 15px;
 		padding-top: 15px;
+		padding-bottom: 4px;
 		border-top: 1px solid #f1f2f6;
 	}
 	.progress-labels {
