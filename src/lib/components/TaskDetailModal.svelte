@@ -58,7 +58,6 @@
 		<div class="modal-header">
 			<div class="header-meta">
 				<span class="date-badge"><Calendar size={13} /> {dateCreated}</span>
-				<span class="id-badge">#{task.id}</span>
 			</div>
 			<button class="close-btn" on:click={() => dispatch('close')}>
 				<X size={24} />
@@ -181,8 +180,7 @@
 		display: flex;
 		gap: 10px;
 	}
-	.date-badge,
-	.id-badge {
+	.date-badge {
 		font-size: 0.75rem;
 		color: var(--text-faint);
 		background: var(--surface);

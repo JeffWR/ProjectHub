@@ -7,10 +7,30 @@
 	import { addToast } from '$lib/stores/toast';
 	import { settings } from '$lib/stores/settings';
 	import { themes, themeLabels } from '$lib/themes';
+	import { requestPermission } from '$lib/notifications';
 
 	const dispatch = createEventDispatcher();
 
 	let loading = false;
+	let notifPermission =
+		typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+
+	async function toggleNotifications() {
+		if ($settings.notifications) {
+			// Turn off — just flip the setting
+			settings.update((s) => ({ ...s, notifications: false }));
+		} else {
+			// Turn on — ask for permission first if not already granted
+			if (notifPermission !== 'granted') {
+				notifPermission = await requestPermission();
+			}
+			if (notifPermission === 'granted') {
+				settings.update((s) => ({ ...s, notifications: true }));
+			} else {
+				addToast('Please allow notifications in your browser settings', 'error');
+			}
+		}
+	}
 	let email = '';
 	let password = '';
 	let isSignUp = false; // Toggle between login and signup
@@ -211,6 +231,29 @@
 				{/if}
 			</div>
 		{/if}
+
+		<!-- Notifications toggle — always visible -->
+		<div class="section">
+			<div class="notif-row">
+				<div class="notif-label">
+					<h3>Notifications</h3>
+					<p class="sub-text">Get alerted when a session or break ends.</p>
+				</div>
+				<button
+					class="toggle-btn"
+					class:active={$settings.notifications}
+					on:click={toggleNotifications}
+					title={$settings.notifications ? 'Disable notifications' : 'Enable notifications'}
+				>
+					<span class="toggle-knob"></span>
+				</button>
+			</div>
+			{#if notifPermission === 'denied'}
+				<p class="notif-warning">
+					Notifications are blocked by your browser. Enable them in your browser's site settings.
+				</p>
+			{/if}
+		</div>
 
 		<!-- Theme picker — always visible regardless of login state -->
 		<div class="section">
@@ -571,6 +614,54 @@
 	}
 	.theme-btn.active span {
 		color: var(--text-primary);
+	}
+
+	/* NOTIFICATIONS TOGGLE */
+	.notif-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+	}
+	.notif-label h3 {
+		margin: 0 0 2px 0;
+	}
+	.notif-label .sub-text {
+		margin: 0;
+	}
+	.toggle-btn {
+		flex-shrink: 0;
+		width: 48px;
+		height: 28px;
+		border-radius: 999px;
+		border: none;
+		background: var(--border-strong);
+		cursor: pointer;
+		padding: 3px;
+		display: flex;
+		align-items: center;
+		transition: background 0.2s;
+	}
+	.toggle-btn.active {
+		background: #4caf50;
+	}
+	.toggle-knob {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: white;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+		transition: transform 0.2s;
+		display: block;
+	}
+	.toggle-btn.active .toggle-knob {
+		transform: translateX(20px);
+	}
+	.notif-warning {
+		margin: 8px 0 0 0;
+		font-size: 0.78rem;
+		color: #ff7675;
+		line-height: 1.4;
 	}
 
 	@media (max-width: 768px) {
